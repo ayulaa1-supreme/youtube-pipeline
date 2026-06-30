@@ -2,27 +2,29 @@
 // ===========================================
 // SETTINGS - edit only this section
 // ===========================================
+// Replace each "<...>" placeholder with your own value.
+// For production, prefer PropertiesService over hard-coded secrets.
 
 const CONFIG = {
-  CLAUDE_API_KEY:  "sk-ant-XXXXX",
-  NETLIFY_TOKEN:   "YOUR_NETLIFY_TOKEN",
-  NETLIFY_SITE:    "ayelet-yt-summaries",
-  EMAIL_TO:        "ayulaa1@gmail.com",
-  SHEET_NAME:      "גיליון1",
-  COL_URL:         1,
-  COL_TITLE:       2,
-  COL_TOPIC:       3,
-  COL_STATUS:      4,
-  COL_DATE:        5,
-  COL_LINK:        6,
-  SUPADATA_KEY:    "YOUR_SUPADATA_KEY",
-  DRIVE_FOLDER_ID: "",
-  STATIC_PAGES_FOLDER_ID: "16LOjCjmMDKNspUkPHrAtAn0LF97vVG6s", // ← תיקיית Drive עם about.html, casestudy וכו'
-  START_ROW:       2,
-  TOPICS:          ["AI Tools", "Productivity", "Entrepreneurship"],
-  WEBAPP_URL:        "https://script.google.com/macros/s/AKfycbySZRKyIF1rsrT3NAnQd-xUhky9UDW6hKo4vV55IAwkst_3t8cNMwJhczyncFoqqOS7/exec",           // ← מלאי לאחר Deploy as Web App: כתובת ה-/exec
-  ADMIN_CODE:        "YOUR_ADMIN_CODE", // ← קוד הכניסה לעריכה — שני לפי רצונך
-  SUBSCRIBERS_SHEET: "Subscribers" // שם הטאב לנרשמים (צרי אותו ב-Sheets)
+  CLAUDE_API_KEY:         "<YOUR_CLAUDE_API_KEY>",       // https://console.anthropic.com
+  NETLIFY_TOKEN:          "<YOUR_NETLIFY_TOKEN>",        // https://app.netlify.com/user/applications
+  NETLIFY_SITE:           "<YOUR_NETLIFY_SITE_NAME>",    // e.g. "my-yt-summaries"
+  EMAIL_TO:               "<YOUR_OWNER_EMAIL>",          // where you (the owner) receive notifications
+  SHEET_NAME:             "גיליון1",                      // active sheet/tab name
+  COL_URL:                1,
+  COL_TITLE:              2,
+  COL_TOPIC:              3,
+  COL_STATUS:             4,
+  COL_DATE:               5,
+  COL_LINK:               6,
+  SUPADATA_KEY:           "<YOUR_SUPADATA_KEY>",         // https://supadata.ai
+  DRIVE_FOLDER_ID:        "<YOUR_DRIVE_FOLDER_ID>",      // optional backup folder
+  STATIC_PAGES_FOLDER_ID: "<YOUR_STATIC_PAGES_FOLDER_ID>", // Drive folder with about.html, casestudy, etc.
+  START_ROW:              2,
+  TOPICS:                 ["AI Tools", "Productivity", "Entrepreneurship"],
+  WEBAPP_URL:             "<YOUR_DEPLOYED_WEBAPP_URL>",  // fill after Deploy as Web App (the /exec URL)
+  ADMIN_CODE:             "<YOUR_ADMIN_CODE>",           // long random string — used to authorize deletions
+  SUBSCRIBERS_SHEET:      "Subscribers"
 };
 
 // ===========================================
@@ -67,7 +69,7 @@ function processNewVideos() {
 
       const netlifyUrl = deployAllToNetlify(sheet, data, html, videoId, heTitle, topic, i);
 
-      sendEmailNotification(title, url, netlifyUrl, topic);
+      sendEmailNotification(heTitle, url, netlifyUrl, topic);
       sendToAllSubscribers(heTitle, url, netlifyUrl, topic);
 
       sheet.getRange(sheetRow, CONFIG.COL_STATUS).setValue("Done");
@@ -252,9 +254,7 @@ function buildIndexPage(videos) {
 '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">' +
 '<style>' +
 '@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}' +
-'@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}' +
 '.anim-ready{opacity:0}.anim-fadeup{animation:fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both}' +
-'.cursor{animation:blink 0.7s step-end infinite;color:#0d9488}.cursor.done{animation:none;opacity:0}' +
 '.topic-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}' +
 '*{box-sizing:border-box;margin:0;padding:0}' +
 'body{font-family:Heebo,Arial,sans-serif;direction:rtl;' +
@@ -262,6 +262,7 @@ function buildIndexPage(videos) {
 'background-image:linear-gradient(rgba(0,0,0,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.04) 1px,transparent 1px);' +
 'background-size:28px 28px;color:#1f2937;line-height:1.7}' +
 '.container{max-width:900px;margin:0 auto;padding:0 1.2rem 4rem}' +
+/* Hero — compact bar */
 '.hero{background:#fff;border-bottom:1px solid #f0f0f0;padding:1.6rem 2rem 1.4rem;' +
 'position:relative;display:flex;align-items:center;justify-content:space-between;gap:1rem}' +
 '.hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;' +
@@ -277,6 +278,7 @@ function buildIndexPage(videos) {
 '.stat-num{display:block;font-size:1.4rem;font-weight:800;color:#ec4899;line-height:1}' +
 '.stat-num.teal{color:#0d9488}' +
 '.stat-label{font-size:.7rem;color:#b0b7c3;font-weight:500;margin-top:.1rem}' +
+/* Topic sections */
 '.topic-section{background:white;border:1px solid #f3f4f6;border-radius:14px;' +
 'padding:1.4rem;margin-bottom:1.2rem;box-shadow:0 2px 12px rgba(0,0,0,0.04);' +
 'border-right:4px solid #0d9488}' +
@@ -287,6 +289,7 @@ function buildIndexPage(videos) {
 '.topic-count{background:#fce7f3;color:#ec4899;border:1px solid #fbcfe8;' +
 'border-radius:50%;width:28px;height:28px;display:flex;align-items:center;' +
 'justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0}' +
+/* Cards */
 '.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0.8rem}' +
 '.video-card{background:#fafafa;border:1px solid #f3f4f6;border-radius:10px;' +
 'padding:1.1rem;text-decoration:none;color:inherit;display:block;' +
@@ -297,6 +300,7 @@ function buildIndexPage(videos) {
 '.card-title{font-size:0.88rem;font-weight:600;color:#111827;line-height:1.45;margin-bottom:0.6rem}' +
 '.card-date{font-size:0.72rem;color:#9ca3af}' +
 '.empty{text-align:center;padding:3rem;color:#9ca3af}' +
+/* Search bar */
 '.search-wrap{background:#fff;border-bottom:1px solid #f0f0f0;padding:0.7rem 2rem}' +
 '.search-inner{position:relative;max-width:900px;margin:0 auto}' +
 '.search-icon{position:absolute;top:50%;transform:translateY(-50%);left:0.85rem;font-size:0.9rem;pointer-events:none;line-height:1}' +
@@ -305,6 +309,7 @@ function buildIndexPage(videos) {
 'transition:border-color 0.15s,box-shadow 0.15s;background:#fafafa}' +
 '.search-input:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,0.1);background:#fff}' +
 '.no-results{display:none;text-align:center;padding:3rem 1rem;color:#9ca3af;font-size:0.9rem}' +
+/* Admin delete button — hidden unless admin mode active */
 '.delete-btn{display:none;position:absolute;top:.45rem;left:.45rem;' +
 'background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;' +
 'border-radius:50%;width:22px;height:22px;font-size:.68rem;font-weight:800;' +
@@ -316,9 +321,11 @@ function buildIndexPage(videos) {
 '.admin-banner{display:none;background:#111827;color:#f9a8d4;text-align:center;' +
 'padding:.5rem 1rem;font-size:.78rem;font-weight:600;letter-spacing:.04em}' +
 '.admin-mode .admin-banner{display:block}' +
+/* Lock button in hero */
 '.lock-btn{background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.35;' +
 'transition:opacity .2s;padding:.2rem;line-height:1;flex-shrink:0}' +
 '.lock-btn:hover{opacity:1}' +
+/* Subscribe card */
 '.subscribe-card{background:#fff;border:1px solid #f0f0f0;border-radius:14px;' +
 'padding:1.4rem 1.6rem;margin-bottom:1.2rem;' +
 'box-shadow:0 1px 8px rgba(0,0,0,0.04);display:flex;align-items:center;' +
@@ -376,25 +383,26 @@ sections +
 '<script>' +
 'var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add("anim-fadeup");obs.unobserve(x.target);}});},{threshold:0.1,rootMargin:"0px 0px -30px 0px"});' +
 'document.querySelectorAll(".anim-ready").forEach(function(el){obs.observe(el);});' +
-'var txt="סיכומים מדויקים - רק מה שנאמר, עם צעדי פעולה";' +
-'var tw=document.getElementById("tw"),cur=document.getElementById("cur"),idx=0;' +
-'function type(){if(idx<txt.length){tw.textContent=txt.slice(0,++idx);setTimeout(type,idx<5?80:42);}else{setTimeout(function(){cur.classList.add("done");},800);}}' +
-'setTimeout(type,600);' +
 'function countUp(el,target,dur){var s=performance.now();(function step(now){var p=Math.min((now-s)/dur,1);el.textContent=Math.round((1-Math.pow(1-p,3))*target);if(p<1)requestAnimationFrame(step);})(performance.now());}' +
 'setTimeout(function(){countUp(document.getElementById("cv"),' + totalVideos + ',1200);setTimeout(function(){countUp(document.getElementById("ct"),' + totalTopics + ',800);},200);},400);' +
 'var WEBAPP_URL="' + CONFIG.WEBAPP_URL + '";' +
 'var ADMIN_HASH="' + Utilities.base64Encode(CONFIG.ADMIN_CODE) + '";' +
+'var adminCode=null;' + /* set after successful login; sent with delete requests for server-side auth */
+/* Admin login via lock button */
 'function adminLogin(){' +
 'if(document.body.classList.contains("admin-mode")){' +
 'document.body.classList.remove("admin-mode");' +
+'adminCode=null;' +
 'document.getElementById("lock-btn").textContent="🔒";return;}' +
 'var code=prompt("קוד גישה:");' +
 'if(!code)return;' +
 'if(btoa(unescape(encodeURIComponent(code)))===ADMIN_HASH){' +
 'document.body.classList.add("admin-mode");' +
+'adminCode=code;' +
 'document.getElementById("lock-btn").textContent="🔓";' +
 'attachDeleteHandlers();' +
 '}else{alert("קוד שגוי");}}' +
+/* Attach delete buttons */
 'function attachDeleteHandlers(){' +
 'document.querySelectorAll(".delete-btn").forEach(function(btn){' +
 'if(btn.dataset.bound)return;btn.dataset.bound="1";' +
@@ -406,11 +414,13 @@ sections +
 'if(!confirm("למחוק: "+titleText+"?"))return;' +
 'btn.textContent="...";btn.style.pointerEvents="none";' +
 'if(!WEBAPP_URL){alert("WEBAPP_URL ריק — עדכני ב-CONFIG");return;}' +
-'fetch(WEBAPP_URL+"?action=delete&vid="+encodeURIComponent(vid),{mode:"no-cors"})' +
+'if(!adminCode){alert("חסר קוד אדמין");return;}' +
+'fetch(WEBAPP_URL+"?action=delete&vid="+encodeURIComponent(vid)+"&code="+encodeURIComponent(adminCode),{mode:"no-cors"})' +
 '.then(function(){card.style.opacity="0.35";card.style.pointerEvents="none";' +
 'card.querySelector(".card-title").textContent="נמחק — מתעדכן...";})' +
 '.catch(function(){alert("שגיאה — בדקי את WEBAPP_URL");});' +
 '});});}' +
+/* Subscribe */
 'function doSubscribe(){' +
 'var email=document.getElementById("sub-email").value.trim();' +
 'var msg=document.getElementById("sub-msg");' +
@@ -458,14 +468,6 @@ function getYouTubeTranscript(url) {
   return Array.isArray(data.content)
     ? data.content.map(function(s) { return s.text || ""; }).join(" ").replace(/\s+/g, " ").trim()
     : data.content.toString().trim();
-}
-
-function xmlToPlainText(xml) {
-  return xml
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&#39;/g, "'").replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ").trim();
 }
 
 function extractVideoId(url) {
@@ -624,7 +626,7 @@ function extractHebrewTitle(html) {
 }
 
 // ===========================================
-// WEB APP HANDLER — Deploy as Web App to enable delete
+// WEB APP HANDLER — Deploy as Web App to enable delete/subscribe
 // Execute as: Me | Who has access: Anyone
 // ===========================================
 function doGet(e) {
@@ -637,9 +639,17 @@ function doGet(e) {
     }
     var action = e.parameter.action;
     var vid    = (e.parameter.vid || "").toString().trim();
-    var email = (e.parameter.email || "").toString().trim().toLowerCase();
-    var token = (e.parameter.token || "").toString().trim();
+    var email  = (e.parameter.email || "").toString().trim().toLowerCase();
+    var token  = (e.parameter.token || "").toString().trim();
+    var code   = (e.parameter.code || "").toString();
+
     if (action === "delete" && vid) {
+      // Server-side auth: ADMIN_CODE must be set AND match the code from the request.
+      // Without this, anyone who knows the WEBAPP_URL could delete any video.
+      if (!CONFIG.ADMIN_CODE || code !== CONFIG.ADMIN_CODE) {
+        output.setContent(JSON.stringify({status:"error",message:"Unauthorized"}));
+        return output;
+      }
       deleteVideoFromLibrary(vid);
       output.setContent(JSON.stringify({status:"ok",deleted:vid}));
     } else if (action === "subscribe" && email) {
@@ -707,7 +717,7 @@ function deleteVideoFromLibrary(videoId) {
 
 // ===========================================
 // SUBSCRIBERS
-// Sheet "Subscribers": A=Email, B=Token, C=Date, D=Status
+// Sheet "Subscribers": A=Email, B=Token, C=SignupDate, D=Status, E=RemovedAt
 // ===========================================
 function getSubscribersSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -725,10 +735,10 @@ function addSubscriber(email) {
   var data = sh.getDataRange().getValues();
   // Check if already subscribed
   for (var i = 1; i < data.length; i++) {
-    if ((data[i][0]||"" ).toString().toLowerCase() === email && data[i][3] === "Active") {
+    if ((data[i][0]||"").toString().toLowerCase() === email && data[i][3] === "Active") {
       return "already_subscribed";
     }
-    if ((data[i][0]||"" ).toString().toLowerCase() === email && data[i][3] === "Unsubscribed") {
+    if ((data[i][0]||"").toString().toLowerCase() === email && data[i][3] === "Unsubscribed") {
       sh.getRange(i+1, 4).setValue("Active"); // resubscribe
       sendSubscribeConfirmation(email, data[i][1]);
       return "resubscribed";
@@ -744,10 +754,10 @@ function removeSubscriberByToken(token) {
   var sh = getSubscribersSheet();
   var data = sh.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if ((data[i][1]||"" ).toString() === token) {
+    if ((data[i][1]||"").toString() === token) {
       var ts = new Date().toLocaleString("he-IL", {timeZone:"Asia/Jerusalem"});
       sh.getRange(i+1, 4).setValue("Unsubscribed");
-      sh.getRange(i+1, 5).setValue(ts); // לוג תאריך ושעה של הסרה
+      sh.getRange(i+1, 5).setValue(ts);
       return;
     }
   }
@@ -775,11 +785,15 @@ function sendToAllSubscribers(title, youtubeUrl, netlifyUrl, topic) {
   var sh = getSubscribersSheet();
   var data = sh.getDataRange().getValues();
   var libUrl = "https://" + CONFIG.NETLIFY_SITE + ".netlify.app";
+  var ownerEmail = (CONFIG.EMAIL_TO || "").toLowerCase();
   for (var i = 1; i < data.length; i++) {
-    var email  = (data[i][0]||"" ).toString().trim();
-    var token  = (data[i][1]||"" ).toString();
-    var status = (data[i][3]||"" ).toString();
+    var email  = (data[i][0]||"").toString().trim();
+    var token  = (data[i][1]||"").toString();
+    var status = (data[i][3]||"").toString();
     if (!email || status !== "Active") continue;
+    // Skip the owner — they already get the dedicated owner notification via sendEmailNotification.
+    // Without this filter, the owner receives two emails per video (owner + subscriber).
+    if (email.toLowerCase() === ownerEmail) continue;
     var unsubUrl = CONFIG.WEBAPP_URL + "?action=unsubscribe&token=" + token;
     try {
       MailApp.sendEmail({
@@ -803,33 +817,6 @@ function sendToAllSubscribers(title, youtubeUrl, netlifyUrl, topic) {
       Logger.log("Failed to send to " + email + ": " + err.message);
     }
   }
-}
-
-// ===========================================
-// ONE-TIME MIGRATION: backfill Hebrew titles
-// Run once from Apps Script editor: migrateHebrewTitles()
-// ===========================================
-function migrateHebrewTitles() {
-  const props = PropertiesService.getScriptProperties();
-  const all = props.getProperties();
-  var migrated = 0;
-
-  Object.keys(all).forEach(function(key) {
-    if (!key.startsWith("vid_html_")) return;
-    const videoId = key.replace("vid_html_", "");
-    if (props.getProperty("vid_title_he_" + videoId)) return; // already done
-    const heTitle = extractHebrewTitle(all[key]);
-    if (heTitle) {
-      props.setProperty("vid_title_he_" + videoId, heTitle);
-      Logger.log("Migrated: " + videoId + " → " + heTitle);
-      migrated++;
-    } else {
-      Logger.log("No h1 found for: " + videoId);
-    }
-  });
-
-  Logger.log("Done. Migrated " + migrated + " titles.");
-  redeployIndex(); // rebuild library with Hebrew titles
 }
 
 // ===========================================
@@ -863,7 +850,7 @@ function redeployIndex() {
     if (html) blobs.push(Utilities.newBlob(html, "text/html", v.videoId + ".html"));
   });
 
-  // Static pages (about.html, casestudy וכו') מתיקיית Drive
+  // Static pages (about.html, casestudy, etc.) from Drive folder
   if (CONFIG.STATIC_PAGES_FOLDER_ID) {
     try {
       const folder = DriveApp.getFolderById(CONFIG.STATIC_PAGES_FOLDER_ID);
@@ -892,7 +879,7 @@ function redeployIndex() {
   const deployData = JSON.parse(resp.getContentText());
   if (deployData.error) throw new Error("Netlify: " + deployData.error);
   waitForDeploy(deployData.id);
-  Logger.log("Index redeployed with Hebrew titles.");
+  Logger.log("Index redeployed.");
 }
 
 // ===========================================
@@ -916,7 +903,7 @@ function sanitizeFilename(name) {
 }
 
 // ===========================================
-// EMAIL
+// OWNER EMAIL NOTIFICATION
 // ===========================================
 function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
   const indexUrl = "https://" + CONFIG.NETLIFY_SITE + ".netlify.app";
@@ -935,50 +922,6 @@ function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
 }
 
 // ===========================================
-// ONE-TIME MIGRATION: load existing video HTMLs into ScriptProperties
-// Run ONCE manually after updating the script, then delete or ignore
-// ===========================================
-function migrateExistingVideosToProperties() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
-  if (!sheet) { Logger.log("Sheet not found"); return; }
-  const data = sheet.getRange(CONFIG.START_ROW, 1, sheet.getLastRow() - CONFIG.START_ROW + 1, 6).getValues();
-  const props = PropertiesService.getScriptProperties();
-  let count = 0;
-  data.forEach(function(row) {
-    const url = (row[0] || "").toString().trim();
-    const title = (row[1] || "").toString().trim();
-    const status = (row[3] || "").toString().trim();
-    if (!url || !status.includes("Done")) return;
-    const vid = extractVideoId(url);
-    if (!vid) return;
-    if (props.getProperty("vid_html_" + vid)) {
-      Logger.log("Already stored: " + vid);
-      return;
-    }
-    // Try Drive
-    try {
-      const files = DriveApp.getRootFolder().getFilesByName(sanitizeFilename(title) + "_" + vid + ".html");
-      if (files.hasNext()) {
-        props.setProperty("vid_html_" + vid, files.next().getBlob().getDataAsString());
-        Logger.log("Migrated: " + vid);
-        count++;
-      } else {
-        // Also try with "Video " fallback title
-        const files2 = DriveApp.getRootFolder().getFilesByName(sanitizeFilename("Video " + vid) + "_" + vid + ".html");
-        if (files2.hasNext()) {
-          props.setProperty("vid_html_" + vid, files2.next().getBlob().getDataAsString());
-          Logger.log("Migrated (fallback): " + vid);
-          count++;
-        } else {
-          Logger.log("NOT FOUND in Drive: " + vid + " (title: " + title + ")");
-        }
-      }
-    } catch(e) { Logger.log("Error for " + vid + ": " + e.message); }
-  });
-  Logger.log("Migration complete. Migrated: " + count);
-}
-
-// ===========================================
 // DAILY TRIGGER - run once to set up
 // ===========================================
 function setupDailyTrigger() {
@@ -988,40 +931,22 @@ function setupDailyTrigger() {
 }
 
 // ===========================================
-// DEBUG - run manually to test transcript fetch
-// ===========================================
-// DEBUG DRIVE - run this to see what HTML files exist in Drive
+// DEBUG - inspect what's stored in Drive and ScriptProperties
 // ===========================================
 function debugDriveFiles() {
   Logger.log("=== Searching Drive for HTML files ===");
-  // Search ALL html files in Drive
   try {
     const allHtml = DriveApp.searchFiles('mimeType = "text/html" and trashed = false');
     let count = 0;
     while (allHtml.hasNext()) {
       const f = allHtml.next();
-      Logger.log("FILE: " + f.getName() + " | ID: " + f.getId() + " | Parent: " + f.getParents().next().getName());
+      Logger.log("FILE: " + f.getName() + " | ID: " + f.getId());
       count++;
     }
     Logger.log("Total HTML files found: " + count);
   } catch(e) { Logger.log("Search error: " + e.message); }
 
-  Logger.log("=== Searching specifically for msFxQ7OYPj8 ===");
-  try {
-    const specific = DriveApp.searchFiles('title contains "msFxQ7OYPj8" and trashed = false');
-    while (specific.hasNext()) {
-      const f = specific.next();
-      Logger.log("FOUND: " + f.getName());
-    }
-  } catch(e) { Logger.log("Specific search error: " + e.message); }
-
   Logger.log("=== ScriptProperties ===");
   const props = PropertiesService.getScriptProperties().getProperties();
   Object.keys(props).forEach(function(k) { Logger.log(k + ": " + props[k].substring(0, 80)); });
-}
-
-// ─── TEST HELPERS ───
-function testSubscribe() {
-  var result = addSubscriber("ayulaa1@gmail.com");
-  Logger.log("Result: " + result);
 }

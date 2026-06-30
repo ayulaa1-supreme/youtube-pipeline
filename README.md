@@ -1,6 +1,6 @@
 # 📺 YouTube → HTML Summary Pipeline
 
-**Automated pipeline: YouTube URL → Hebrew HTML summary → Netlify → Gmail**
+**Automated pipeline: YouTube URL → Hebrew HTML summary → Netlify library → Gmail notification**
 
 Built by [Ayelet Shachak Shul](https://ayelet-yt-summaries.netlify.app/about.html) · 2026
 
@@ -8,22 +8,10 @@ Built by [Ayelet Shachak Shul](https://ayelet-yt-summaries.netlify.app/about.htm
 
 ## What it does
 
-Add a YouTube URL to a Google Sheet → the pipeline fires **automatically**, and within minutes a branded Hebrew summary page is live on Netlify with a Gmail notification. Zero manual work, zero button clicks.
+Add a YouTube URL to a Google Sheet → the pipeline fetches the transcript, generates a Hebrew summary page with Claude, deploys it to Netlify, and emails you (and any subscribers) when it's live.
 
-> 🔁 **Fully automatic:** an `onChange` installable trigger watches the Sheet at all times. The moment a new row is added, the entire pipeline runs — no cron job, no manual trigger, nothing to remember.
-
-**Live library:** [ayelet-yt-summaries.netlify.app](https://ayelet-yt-summaries.netlify.app)  
+**Live library:** [ayelet-yt-summaries.netlify.app](https://ayelet-yt-summaries.netlify.app)
 **Case study:** [Full technical breakdown](https://ayelet-yt-summaries.netlify.app/youtube-pipeline-casestudy.html)
-
----
-
-## Goals
-
-- **Capture knowledge:** every video watched becomes a documented, searchable asset
-- **Zero manual work:** add one URL, everything else happens automatically
-- **Consistent format:** every summary follows the same 3-level structure with action steps
-- **Instant access:** an online library you can search, filter, and share
-- **Near-zero cost:** under ₪1 per video, no server infrastructure needed
 
 ---
 
@@ -31,7 +19,7 @@ Add a YouTube URL to a Google Sheet → the pipeline fires **automatically**, an
 
 ```
 Google Sheets (URL input)
-       ↓  onChange trigger — fires instantly on every new row, automatically
+       ↓  daily time trigger (or run processNewVideos manually)
 Apps Script
        ↓  Supadata API
 YouTube transcript
@@ -39,8 +27,8 @@ YouTube transcript
 Hebrew HTML summary
        ↓  Netlify ZIP Deploy API
 Live page + updated library index
-       ↓  Gmail API
-Email notification
+       ↓  Gmail / MailApp
+Owner notification + subscriber emails
 ```
 
 ---
@@ -49,16 +37,16 @@ Email notification
 
 | Layer | Tool | Notes |
 |---|---|---|
-| Input | Google Sheets | onChange installable trigger |
-| Orchestration | Google Apps Script | No separate server needed |
+| Input | Google Sheets | URL, title, topic per row |
+| Orchestration | Google Apps Script | Daily time trigger |
 | Transcript | [Supadata.ai](https://supadata.ai) | YouTube transcript API |
-| Summarization | Claude API (`claude-sonnet-4-6`) | max_tokens: 16,000 |
+| Summarization | Claude API (`claude-sonnet-4-6`) | `max_tokens: 16000` |
 | Hosting | Netlify | ZIP Deploy API, free tier |
-| Notification | Gmail | Apps Script MailApp |
+| Notification | Gmail / MailApp | Apps Script built-in |
 | Backup | Google Drive | Auto-saves each HTML file |
 
-**Cost per video:** < ₪1 (Claude API only)  
-**Processing time:** ~2 minutes end-to-end
+**Cost per video:** ~₪0.55 (Claude API)
+**Processing time:** ~2-3 minutes end-to-end
 
 ---
 
@@ -69,15 +57,7 @@ Each summary page includes:
 - **Level 2:** Methods and approaches
 - **Level 3:** Deep dive — definitions, examples, action steps
 
-Rule: only content explicitly stated in the transcript. No inventions, no additions.
-
----
-
-## Topics
-
-- `AI Tools`
-- `Productivity`
-- `Entrepreneurship`
+**Iron rule:** only content explicitly stated in the transcript. No inventions, no additions.
 
 ---
 
@@ -87,74 +67,89 @@ Rule: only content explicitly stated in the transcript. No inventions, no additi
 - Google account (Sheets + Apps Script)
 - [Supadata API key](https://supadata.ai)
 - [Anthropic API key](https://console.anthropic.com)
-- Netlify account + site ID + personal access token
+- [Netlify personal access token](https://app.netlify.com/user/applications)
 
 ### Configuration
 
-In `YouTube_to_Doc.gs`, update the `CONFIG` object:
+In `YouTube_to_Doc.gs`, fill in the `CONFIG` object. See `.env.example` for the full list of required values.
 
 ```javascript
-var CONFIG = {
-  ANTHROPIC_API_KEY: "sk-ant-...",
-  SUPADATA_API_KEY:  "...",
-  NETLIFY_SITE_ID:   "...",
-  NETLIFY_TOKEN:     "...",
-  TOPICS:            ["AI Tools", "Productivity", "Entrepreneurship"],
-  INDEX_URL:         "https://your-site.netlify.app",
-  DRIVE_FOLDER_ID:   ""  // optional
+const CONFIG = {
+  CLAUDE_API_KEY:         "sk-ant-...",
+  NETLIFY_TOKEN:          "nfp_...",
+  NETLIFY_SITE:           "my-yt-summaries",
+  EMAIL_TO:               "you@example.com",
+  SUPADATA_KEY:           "...",
+  DRIVE_FOLDER_ID:        "...",            // optional
+  STATIC_PAGES_FOLDER_ID: "...",            // optional
+  WEBAPP_URL:             "https://script.google.com/macros/s/.../exec",
+  ADMIN_CODE:             "long-random-string",
+  // ...
 };
 ```
 
-> ⚠️ **Never share this file publicly with API keys inside.**  
-> Use [Google Apps Script Properties](https://developers.google.com/apps-script/guides/properties) to store secrets safely in production.
+> ⚠️ **Never commit this file with real API keys.**
+> For production, prefer [PropertiesService](https://developers.google.com/apps-script/guides/properties) to store secrets.
 
 ### Google Sheet structure
 
-| Column A | Column B |
-|---|---|
-| YouTube URL | Topic |
-| https://youtube.com/watch?v=... | AI Tools |
+The active tab (default name: `גיליון1`) must have these columns:
 
-### Install the trigger (one-time setup)
+| A: URL | B: Title | C: Topic | D: Status | E: Date | F: Link |
+|---|---|---|---|---|---|
+| `https://youtube.com/watch?v=...` | Optional title | `AI Tools` | (auto-filled) | (auto-filled) | (auto-filled) |
 
-In the Apps Script editor:  
-**Triggers → Add Trigger → `processNewVideos` → From spreadsheet → On change**
+A second tab named `Subscribers` is created automatically the first time someone subscribes.
 
-This is a one-time step. After setup, the trigger runs forever — every time a new URL is added to the Sheet, the full pipeline fires automatically with no manual action required.
+### Deploy
+
+1. Paste `YouTube_to_Doc.gs` into the Apps Script editor of your sheet
+2. Fill the `CONFIG` block
+3. Run `setupDailyTrigger()` once — installs a daily 08:00 trigger that calls `processNewVideos`
+4. **Deploy → New deployment → Web app** (execute as Me, access Anyone) — copy the resulting `/exec` URL into `CONFIG.WEBAPP_URL` and redeploy once more so the URL is baked into the index page
+
+---
+
+## Bug fixes vs. earlier versions
+
+This revision (`v2026-06-30`) addresses three real issues found in code review:
+
+| Fix | What changed | Why it matters |
+|---|---|---|
+| **Double email** | `sendToAllSubscribers` now skips `CONFIG.EMAIL_TO` | Previously, if the owner email was also in the Subscribers tab, every new video sent two emails (owner + subscriber). |
+| **Delete endpoint auth** | `doGet` now requires `?code=<ADMIN_CODE>` on `action=delete` | Previously, anyone who knew the `WEBAPP_URL` could call `?action=delete&vid=X` and delete any video. |
+| **Broken typewriter** | Removed dead `setTimeout(type,...)` block referencing missing DOM elements `#tw` / `#cur` | Was throwing a silent JS error on every library page load. |
+
+`testSubscribe()` was also removed — running it once was the cause of the double-email bug.
 
 ---
 
 ## Sync with clasp (optional)
 
-To connect this repo to your live Apps Script project:
-
 ```bash
 npm install -g @google/clasp
 clasp login
-clasp clone YOUR_SCRIPT_ID   # Apps Script > Settings > Script ID
+clasp clone YOUR_SCRIPT_ID   # Apps Script → Settings → Script ID
+clasp push                   # push local changes
 ```
 
-Then push changes:
-```bash
-clasp push
-```
+`.clasp.json` and `.clasprc.json` are gitignored.
 
 ---
 
 ## Files
 
 ```
-YouTube_to_Doc.gs                # Main pipeline (Apps Script)
-library-preview.html             # Local preview of the library index
-about.html                       # About page
-brand-guidelines.html            # Design system reference
-youtube-pipeline-casestudy.html  # Full case study
-tools-comparison.html            # Stack comparison vs Vercel / Supabase / GitHub
-README.md                        # This file
+YouTube_to_Doc.gs    # Main pipeline (Apps Script)
+appsscript.json      # Apps Script manifest (timezone, scopes, webapp config)
+.env.example         # Required config values (placeholders only)
+.gitignore           # Standard ignores + clasp secrets
+README.md            # This file
+LICENSE              # MIT
 ```
 
 ---
 
 ## License
 
-Personal project. Feel free to fork and adapt — just don't share API keys. 🔑
+MIT. Fork, adapt, share — just don't push your API keys.

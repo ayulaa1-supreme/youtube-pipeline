@@ -1,0 +1,26 @@
+# clasp (Apps Script CLI) — script ID is sensitive
+.clasp.json
+.clasprc.json
+
+# Local secrets — never commit
+.env
+.env.local
+secrets.json
+credentials.json
+
+# Node (only if using clasp tooling)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
