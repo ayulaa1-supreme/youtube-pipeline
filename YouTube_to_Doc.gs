@@ -238,6 +238,14 @@ function waitForDeploy(deployId) {
 // ===========================================
 // INDEX PAGE
 // ===========================================
+// SHA-256 hex digest — used to embed a one-way verifier in the index page.
+// Never embed the admin code itself (or any reversible encoding of it) in public HTML.
+function sha256Hex_(s) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8)
+    .map(function(b) { return ("0" + (b & 0xFF).toString(16)).slice(-2); })
+    .join("");
+}
+
 function buildIndexPage(videos) {
   const byTopic = {};
   CONFIG.TOPICS.forEach(function(t) { byTopic[t] = []; });
@@ -427,7 +435,7 @@ sections +
 'function countUp(el,target,dur){var s=performance.now();(function step(now){var p=Math.min((now-s)/dur,1);el.textContent=Math.round((1-Math.pow(1-p,3))*target);if(p<1)requestAnimationFrame(step);})(performance.now());}' +
 'setTimeout(function(){countUp(document.getElementById("cv"),' + totalVideos + ',1200);setTimeout(function(){countUp(document.getElementById("ct"),' + totalTopics + ',800);},200);},400);' +
 'var WEBAPP_URL="' + CONFIG.WEBAPP_URL + '";' +
-'var ADMIN_HASH="' + Utilities.base64Encode(CONFIG.ADMIN_CODE) + '";' +
+'var ADMIN_HASH="' + sha256Hex_(CONFIG.ADMIN_CODE) + '";' + /* SHA-256, one-way — the code itself is NOT recoverable from the page */
 'var adminCode=null;' + /* set after successful login; sent with delete requests for server-side auth */
 /* Admin login via lock button */
 'function adminLogin(){' +
@@ -437,12 +445,14 @@ sections +
 'document.getElementById("lock-btn").textContent="🔒";return;}' +
 'var code=prompt("קוד גישה:");' +
 'if(!code)return;' +
-'if(btoa(unescape(encodeURIComponent(code)))===ADMIN_HASH){' +
+'sha256Hex(code).then(function(h){' +
+'if(h===ADMIN_HASH){' +
 'document.body.classList.add("admin-mode");' +
 'adminCode=code;' +
 'document.getElementById("lock-btn").textContent="🔓";' +
 'attachDeleteHandlers();' +
-'}else{alert("קוד שגוי");}}' +
+'}else{alert("קוד שגוי");}});}' +
+'function sha256Hex(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return("0"+b.toString(16)).slice(-2)}).join("")});}' +
 /* Attach delete buttons */
 'function attachDeleteHandlers(){' +
 'document.querySelectorAll(".delete-btn").forEach(function(btn){' +
