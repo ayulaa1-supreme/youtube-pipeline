@@ -31,11 +31,30 @@ const CONFIG = {
 // MAIN
 // ===========================================
 function processNewVideos() {
+  // The onChange trigger fires once per sheet edit, and entering one video row is
+  // several edits (URL, title, topic). Without a lock, those firings overlap: each
+  // sees the row as pending, so one new video gets processed — and emailed — N times.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(0)) {
+    Logger.log("Another run is already processing — skipping this trigger firing.");
+    return;
+  }
+  try {
+    // Re-scan until a pass finds nothing, so rows added while a long run was busy
+    // still get processed before the lock is released.
+    let rounds = 0;
+    while (processPendingVideos() > 0 && ++rounds < 5);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function processPendingVideos() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
-  if (!sheet) { Logger.log("Sheet not found: " + CONFIG.SHEET_NAME); return; }
+  if (!sheet) { Logger.log("Sheet not found: " + CONFIG.SHEET_NAME); return 0; }
 
   const lastRow = sheet.getLastRow();
-  if (lastRow < CONFIG.START_ROW) { Logger.log("No rows to process"); return; }
+  if (lastRow < CONFIG.START_ROW) { Logger.log("No rows to process"); return 0; }
 
   const data = sheet.getRange(CONFIG.START_ROW, 1, lastRow - CONFIG.START_ROW + 1, 6).getValues();
   let processed = 0;
@@ -47,6 +66,7 @@ function processNewVideos() {
 
     const sheetRow = CONFIG.START_ROW + i;
     sheet.getRange(sheetRow, CONFIG.COL_STATUS).setValue("Processing...");
+    SpreadsheetApp.flush(); // make the claim visible immediately, not on lazy write-out
 
     try {
       const videoId = extractVideoId(url);
@@ -85,6 +105,7 @@ function processNewVideos() {
   });
 
   Logger.log("Processed: " + processed);
+  return processed;
 }
 
 // ===========================================
