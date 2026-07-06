@@ -71,25 +71,11 @@ Each summary page includes:
 
 ### Configuration
 
-In `YouTube_to_Doc.gs`, fill in the `CONFIG` object. See `.env.example` for the full list of required values.
+All user-specific values live in **Script Properties**, not in the code — so updating the code can never wipe your keys, and there is nothing secret to accidentally commit.
 
-```javascript
-const CONFIG = {
-  CLAUDE_API_KEY:         "sk-ant-...",
-  NETLIFY_TOKEN:          "nfp_...",
-  NETLIFY_SITE:           "my-yt-summaries",
-  EMAIL_TO:               "you@example.com",
-  SUPADATA_KEY:           "...",
-  DRIVE_FOLDER_ID:        "...",            // optional
-  STATIC_PAGES_FOLDER_ID: "...",            // optional
-  WEBAPP_URL:             "https://script.google.com/macros/s/.../exec",
-  ADMIN_CODE:             "long-random-string",
-  // ...
-};
-```
+Apps Script editor → **Project Settings (⚙) → Script Properties**: add `CLAUDE_API_KEY`, `NETLIFY_TOKEN`, `NETLIFY_SITE` (bare site name only), `EMAIL_TO`, `SUPADATA_KEY`, `ADMIN_CODE`, `WEBAPP_URL` (after deploy), and optionally `DRIVE_FOLDER_ID`, `STATIC_PAGES_FOLDER_ID`, `SHEET_NAME`. See `.env.example` for the full list.
 
-> ⚠️ **Never commit this file with real API keys.**
-> For production, prefer [PropertiesService](https://developers.google.com/apps-script/guides/properties) to store secrets.
+📖 **Step-by-step walkthrough: [SETUP.md](SETUP.md)** — from zero to a live library in ~45 minutes, including troubleshooting.
 
 ### Google Sheet structure
 
@@ -104,9 +90,9 @@ A second tab named `Subscribers` is created automatically the first time someone
 ### Deploy
 
 1. Paste `YouTube_to_Doc.gs` into the Apps Script editor of your sheet
-2. Fill the `CONFIG` block
+2. Add your values as Script Properties (see Configuration above / [SETUP.md](SETUP.md))
 3. Run `setupDailyTrigger()` once — installs a daily 08:00 trigger that calls `processNewVideos`
-4. **Deploy → New deployment → Web app** (execute as Me, access Anyone) — copy the resulting `/exec` URL into `CONFIG.WEBAPP_URL` and redeploy once more so the URL is baked into the index page
+4. **Deploy → New deployment → Web app** (execute as Me, access Anyone) — save the resulting `/exec` URL as the `WEBAPP_URL` script property
 
 ---
 
@@ -121,6 +107,15 @@ This revision (`v2026-06-30`) addresses three real issues found in code review:
 | **Broken typewriter** | Removed dead `setTimeout(type,...)` block referencing missing DOM elements `#tw` / `#cur` | Was throwing a silent JS error on every library page load. |
 
 `testSubscribe()` was also removed — running it once was the cause of the double-email bug.
+
+### Revision `v2026-07-06`
+
+| Fix | What changed | Why it matters |
+|---|---|---|
+| **Duplicate processing** | `processNewVideos` now takes a `LockService` lock; overlapping trigger firings skip instead of racing | An onChange trigger fires once per sheet edit — entering one video row is several edits. Without the lock, one new video could be processed (and emailed) up to 7 times. |
+| **Secrets → Script Properties** | The `CONFIG` block reads everything via `PropertiesService`; the code file contains no user values | Pasting a code update used to risk overwriting real keys with placeholders. Now code and config are fully separated. |
+| **Admin code exposure** | The index page embedded `base64(ADMIN_CODE)` — reversible by anyone via view-source. Replaced with a one-way SHA-256 verifier | The delete-endpoint protection was effectively bypassable. After updating, **rotate your `ADMIN_CODE`** — the old one should be treated as public. |
+| **Fail-fast config check** | `assertConfig_()` validates required properties (and that `NETLIFY_SITE` is a bare name, not a URL) before any run | A wrong `NETLIFY_SITE` used to silently create a junk Netlify site; missing keys surfaced as cryptic 401s deep in the pipeline. |
 
 ---
 
@@ -142,7 +137,9 @@ clasp push                   # push local changes
 ```
 YouTube_to_Doc.gs    # Main pipeline (Apps Script)
 appsscript.json      # Apps Script manifest (timezone, scopes, webapp config)
-.env.example         # Required config values (placeholders only)
+SETUP.md             # Step-by-step setup walkthrough + troubleshooting
+static-pages/        # Extra site pages (case study) — deployed from Drive, versioned here
+.env.example         # Required Script Properties (placeholders only)
 .gitignore           # Standard ignores + clasp secrets
 README.md            # This file
 LICENSE              # MIT
