@@ -273,7 +273,7 @@ function buildIndexPage(videos) {
     var cards = "";
     vids.forEach(function(v) {
       cards += '<a href="' + v.videoId + '.html" class="video-card anim-ready" data-vid="' + v.videoId + '">' +
-        '<button class="delete-btn" title="מחיקה">✕</button>' +
+        '<button class="delete-btn" title="מחיקה" aria-label="מחיקת סרטון">✕</button>' +
         '<div class="card-topic">' + topic + '</div>' +
         '<div class="card-title">' + (v.title || v.videoId) + '</div>' +
         '<div class="card-date">' + (v.date || "") + '</div>' +
@@ -281,11 +281,15 @@ function buildIndexPage(videos) {
     });
     sections += '<div class="topic-section anim-ready">' +
       '<div class="topic-header">' +
-      '<span class="topic-icon">' + iconSvg + '</span>' +
+      '<span class="topic-icon" aria-hidden="true">' + iconSvg + '</span>' +
       '<span class="topic-name">' + topic + '</span>' +
-      '<span class="topic-count">' + vids.length + '</span>' +
+      '<span class="topic-count" aria-label="' + vids.length + ' סיכומים">' + vids.length + '</span>' +
+      '<div class="car-nav">' +
+      '<button class="car-btn car-prev" aria-label="הסיכומים הקודמים">›</button>' +
+      '<button class="car-btn car-next" aria-label="הסיכומים הבאים">‹</button>' +
       '</div>' +
-      '<div class="video-grid">' + cards + '</div>' +
+      '</div>' +
+      '<div class="video-track" role="group" aria-label="סיכומים בנושא ' + topic + '">' + cards + '</div>' +
       '</div>';
   });
 
@@ -321,12 +325,12 @@ function buildIndexPage(videos) {
 '.footer-credit b{color:#ec4899;font-weight:600}' +
 'h1{font-size:1.5rem;font-weight:800;color:#111827;margin-bottom:.15rem;line-height:1.3}' +
 'h1 span{color:#ec4899}' +
-'.sub{font-size:.82rem;color:#9ca3af}' +
+'.sub{font-size:.82rem;color:#6b7280}' +
 '.stats{display:flex;align-items:center;gap:1.5rem;flex-shrink:0}' +
 '.stat{text-align:center}' +
 '.stat-num{display:block;font-size:1.4rem;font-weight:800;color:#ec4899;line-height:1}' +
 '.stat-num.teal{color:#0d9488}' +
-'.stat-label{font-size:.7rem;color:#b0b7c3;font-weight:500;margin-top:.1rem}' +
+'.stat-label{font-size:.7rem;color:#6b7280;font-weight:500;margin-top:.1rem}' +
 /* Topic sections */
 '.topic-section{background:white;border:1px solid #f3f4f6;border-radius:14px;' +
 'padding:1.4rem;margin-bottom:1.2rem;box-shadow:0 2px 12px rgba(0,0,0,0.04);' +
@@ -339,7 +343,17 @@ function buildIndexPage(videos) {
 'border-radius:50%;width:28px;height:28px;display:flex;align-items:center;' +
 'justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0}' +
 /* Cards */
-'.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0.8rem}' +
+/* Carousel track — horizontal scroll-snap keeps each section one row tall as the library grows */
+'.video-track{display:flex;gap:0.8rem;overflow-x:auto;scroll-snap-type:x mandatory;' +
+'padding:0.2rem 2px 0.6rem;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#e5e7eb transparent}' +
+'.video-track::-webkit-scrollbar{height:6px}' +
+'.video-track::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:3px}' +
+'.video-track .video-card{flex:0 0 230px;scroll-snap-align:start}' +
+'.car-nav{display:flex;gap:0.4rem;flex-shrink:0}' +
+'.car-btn{background:#fff;border:1px solid #e5e7eb;color:#0d9488;border-radius:50%;width:28px;height:28px;' +
+'display:none;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;line-height:1;padding:0;' +
+'transition:background .15s,color .15s}' +
+'.car-btn:hover{background:#0d9488;color:#fff;border-color:#0d9488}' +
 '.video-card{background:#fafafa;border:1px solid #f3f4f6;border-radius:10px;' +
 'padding:1.1rem;text-decoration:none;color:inherit;display:block;' +
 'border-top:3px solid #0d9488;' +
@@ -347,7 +361,7 @@ function buildIndexPage(videos) {
 '.video-card:hover{border-top-color:#ec4899;transform:translateY(-3px);box-shadow:0 6px 20px rgba(236,72,153,0.12)}' +
 '.card-topic{font-size:0.7rem;color:#0d9488;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem}' +
 '.card-title{font-size:0.88rem;font-weight:600;color:#111827;line-height:1.45;margin-bottom:0.6rem}' +
-'.card-date{font-size:0.72rem;color:#9ca3af}' +
+'.card-date{font-size:0.72rem;color:#6b7280}' +
 '.empty{text-align:center;padding:3rem;color:#9ca3af}' +
 /* Search bar */
 '.search-wrap{background:#fff;border-bottom:1px solid #f0f0f0;padding:0.7rem 2rem}' +
@@ -392,6 +406,18 @@ function buildIndexPage(videos) {
 '.sub-btn:hover{background:#db2777}' +
 '.sub-msg{font-size:.78rem;color:#0d9488;margin-top:.4rem;min-height:1rem;width:100%}' +
 '.sub-msg.err{color:#dc2626}' +
+/* Keyboard focus — visible outline on everything interactive */
+'.video-card:focus-visible,.car-btn:focus-visible,.lock-btn:focus-visible,.sub-btn:focus-visible,' +
+'.delete-btn:focus-visible{outline:2px solid #0d9488;outline-offset:2px}' +
+/* Mobile */
+'@media(max-width:640px){' +
+'.hero{flex-direction:column;align-items:flex-start;gap:0.8rem;padding:1.2rem 1.2rem 1rem}' +
+'.stats{width:100%;justify-content:flex-start;gap:1.2rem}' +
+'.search-wrap{padding:0.7rem 1.2rem}' +
+'.subscribe-card{padding:1.1rem 1.2rem}' +
+'.topic-section{padding:1.1rem}' +
+'.video-track .video-card{flex-basis:78%}' + /* card peeks — invites swipe */
+'}' +
 '</style></head><body>' +
 '<div class="admin-banner">⚙️ מצב ניהול — כפתורי מחיקה פעילים</div>' +
 '<svg width="0" height="0" style="position:absolute;overflow:hidden;"><defs>' +
@@ -406,20 +432,20 @@ function buildIndexPage(videos) {
 '<div class="stats">' +
 '<div class="stat"><span class="stat-num" id="cv">0</span><span class="stat-label">סרטונים</span></div>' +
 '<div class="stat"><span class="stat-num teal" id="ct">0</span><span class="stat-label">נושאים</span></div>' +
-'<button class="lock-btn" id="lock-btn" onclick="adminLogin()" title="כניסת מנהלת">🔒</button>' +
+'<button class="lock-btn" id="lock-btn" onclick="adminLogin()" title="כניסת מנהלת" aria-label="כניסת מנהלת">🔒</button>' +
 '</div></div>' +
 '<div class="search-wrap"><div class="search-inner">' +
-'<span class="search-icon">🔍</span>' +
-'<input class="search-input" id="srch" type="search" placeholder="חיפוש לפי שם סרטון..." autocomplete="off">' +
+'<span class="search-icon" aria-hidden="true">🔍</span>' +
+'<input class="search-input" id="srch" type="search" placeholder="חיפוש לפי שם סרטון..." aria-label="חיפוש לפי שם סרטון" autocomplete="off">' +
 '</div></div>' +
 '<div class="container">' +
 '<div class="subscribe-card">' +
 '<div class="sub-label">📬 סיכומים חדשים <span>ישירות למייל</span></div>' +
 '<div class="sub-form">' +
-'<input type="email" id="sub-email" class="sub-input" placeholder="המייל שלך..." autocomplete="email">' +
+'<input type="email" id="sub-email" class="sub-input" placeholder="המייל שלך..." aria-label="כתובת מייל להרשמה לעדכונים" autocomplete="email">' +
 '<button class="sub-btn" onclick="doSubscribe()">הרשמה</button>' +
 '</div>' +
-'<div id="sub-msg" class="sub-msg"></div>' +
+'<div id="sub-msg" class="sub-msg" role="status" aria-live="polite"></div>' +
 '</div>' +
 sections +
 '<div class="no-results" id="no-res">לא נמצאו תוצאות לחיפוש זה 🔍</div>' +
@@ -490,7 +516,19 @@ sections +
 'c.style.display=m?"":"none";if(m)cv++;});' +
 'sec.style.display=cv?"":"none";if(cv)vis++;});' +
 'var nr=document.getElementById("no-res");' +
-'if(nr)nr.style.display=q&&!vis?"block":"none";});' +
+'if(nr)nr.style.display=q&&!vis?"block":"none";' +
+'window.dispatchEvent(new Event("resize"));});' + /* re-check carousel arrows after filtering */
+/* Carousels: arrows appear only when a section actually overflows */
+'document.querySelectorAll(".topic-section").forEach(function(sec){' +
+'var track=sec.querySelector(".video-track");' +
+'var prev=sec.querySelector(".car-prev"),next=sec.querySelector(".car-next");' +
+'if(!track||!prev||!next)return;' +
+'function upd(){var over=track.scrollWidth>track.clientWidth+4;' +
+'prev.style.display=over?"flex":"none";next.style.display=over?"flex":"none";}' +
+'function step(){return Math.max(track.clientWidth*0.8,240);}' +
+'next.addEventListener("click",function(){track.scrollBy({left:-step(),behavior:"smooth"});});' + /* RTL: forward = scroll left */
+'prev.addEventListener("click",function(){track.scrollBy({left:step(),behavior:"smooth"});});' +
+'window.addEventListener("resize",upd);upd();});' +
 '</script></body></html>';
 }
 
