@@ -1,31 +1,50 @@
 // YouTube to HTML Doc - Google Apps Script
 // ===========================================
-// SETTINGS - edit only this section
+// SETTINGS
 // ===========================================
-// Replace each "<...>" placeholder with your own value.
-// For production, prefer PropertiesService over hard-coded secrets.
+// All user-specific values live in Script Properties, NOT in this file —
+// so pasting a code update can never wipe your keys.
+// Apps Script editor → Project Settings (⚙) → Script Properties → add:
+//   CLAUDE_API_KEY, NETLIFY_TOKEN, NETLIFY_SITE, EMAIL_TO, SUPADATA_KEY,
+//   ADMIN_CODE, WEBAPP_URL, DRIVE_FOLDER_ID (optional), STATIC_PAGES_FOLDER_ID (optional)
+// Full walkthrough: SETUP.md in the repo.
+
+const PROPS_ = PropertiesService.getScriptProperties();
+function prop_(key, fallback) { return PROPS_.getProperty(key) || fallback || ""; }
 
 const CONFIG = {
-  CLAUDE_API_KEY:         "<YOUR_CLAUDE_API_KEY>",       // https://console.anthropic.com
-  NETLIFY_TOKEN:          "<YOUR_NETLIFY_TOKEN>",        // https://app.netlify.com/user/applications
-  NETLIFY_SITE:           "<YOUR_NETLIFY_SITE_NAME>",    // e.g. "my-yt-summaries"
-  EMAIL_TO:               "<YOUR_OWNER_EMAIL>",          // where you (the owner) receive notifications
-  SHEET_NAME:             "גיליון1",                      // active sheet/tab name
+  CLAUDE_API_KEY:         prop_("CLAUDE_API_KEY"),          // https://console.anthropic.com
+  NETLIFY_TOKEN:          prop_("NETLIFY_TOKEN"),           // https://app.netlify.com/user/applications
+  NETLIFY_SITE:           prop_("NETLIFY_SITE"),            // site NAME only, e.g. "my-yt-summaries" — no https://, no .netlify.app
+  EMAIL_TO:               prop_("EMAIL_TO"),                // where you (the owner) receive notifications
+  SHEET_NAME:             prop_("SHEET_NAME", "גיליון1"),    // active sheet/tab name
   COL_URL:                1,
   COL_TITLE:              2,
   COL_TOPIC:              3,
   COL_STATUS:             4,
   COL_DATE:               5,
   COL_LINK:               6,
-  SUPADATA_KEY:           "<YOUR_SUPADATA_KEY>",         // https://supadata.ai
-  DRIVE_FOLDER_ID:        "<YOUR_DRIVE_FOLDER_ID>",      // optional backup folder
-  STATIC_PAGES_FOLDER_ID: "<YOUR_STATIC_PAGES_FOLDER_ID>", // Drive folder with about.html, casestudy, etc.
+  SUPADATA_KEY:           prop_("SUPADATA_KEY"),            // https://supadata.ai
+  DRIVE_FOLDER_ID:        prop_("DRIVE_FOLDER_ID"),         // optional backup folder
+  STATIC_PAGES_FOLDER_ID: prop_("STATIC_PAGES_FOLDER_ID"),  // optional: Drive folder with about.html, casestudy, etc.
   START_ROW:              2,
   TOPICS:                 ["AI Tools", "Productivity", "Entrepreneurship"],
-  WEBAPP_URL:             "<YOUR_DEPLOYED_WEBAPP_URL>",  // fill after Deploy as Web App (the /exec URL)
-  ADMIN_CODE:             "<YOUR_ADMIN_CODE>",           // long random string — used to authorize deletions
+  WEBAPP_URL:             prop_("WEBAPP_URL"),              // fill after Deploy as Web App (the /exec URL)
+  ADMIN_CODE:             prop_("ADMIN_CODE"),              // long random string — authorizes deletions
   SUBSCRIBERS_SHEET:      "Subscribers"
 };
+
+// Fail fast with a clear message instead of a cryptic 401 somewhere downstream.
+function assertConfig_() {
+  const missing = ["CLAUDE_API_KEY", "NETLIFY_TOKEN", "NETLIFY_SITE", "EMAIL_TO", "SUPADATA_KEY"]
+    .filter(function(k) { return !CONFIG[k]; });
+  if (missing.length) {
+    throw new Error("Missing Script Properties: " + missing.join(", ") + " — add them under Project Settings → Script Properties (see SETUP.md)");
+  }
+  if (/[:\/.]/.test(CONFIG.NETLIFY_SITE)) {
+    throw new Error('NETLIFY_SITE must be the bare site name, e.g. "my-yt-summaries" — not a URL');
+  }
+}
 
 // ===========================================
 // MAIN
@@ -50,6 +69,7 @@ function processNewVideos() {
 }
 
 function processPendingVideos() {
+  assertConfig_();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) { Logger.log("Sheet not found: " + CONFIG.SHEET_NAME); return 0; }
 
@@ -434,7 +454,7 @@ sections +
 'var titleText=card.querySelector(".card-title").textContent;' +
 'if(!confirm("למחוק: "+titleText+"?"))return;' +
 'btn.textContent="...";btn.style.pointerEvents="none";' +
-'if(!WEBAPP_URL){alert("WEBAPP_URL ריק — עדכני ב-CONFIG");return;}' +
+'if(!WEBAPP_URL){alert("WEBAPP_URL ריק — הוסיפי אותו ב-Script Properties");return;}' +
 'if(!adminCode){alert("חסר קוד אדמין");return;}' +
 'fetch(WEBAPP_URL+"?action=delete&vid="+encodeURIComponent(vid)+"&code="+encodeURIComponent(adminCode),{mode:"no-cors"})' +
 '.then(function(){card.style.opacity="0.35";card.style.pointerEvents="none";' +
@@ -844,6 +864,7 @@ function sendToAllSubscribers(title, youtubeUrl, netlifyUrl, topic) {
 // REDEPLOY INDEX ONLY (no new video)
 // ===========================================
 function redeployIndex() {
+  assertConfig_();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
   const lastRow = sheet.getLastRow();
   const data = sheet.getRange(CONFIG.START_ROW, 1, lastRow - CONFIG.START_ROW + 1, 6).getValues();
