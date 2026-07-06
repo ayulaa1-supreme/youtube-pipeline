@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Study | מערכת אוטומציה בפרודקשן -0 שרתים, ~₪22 בחודש | אילת שחק שול</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
+    background-color: #ffffff;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+    color: #1f2937;
+    line-height: 1.7;
+    direction: rtl;
+  }
+
+  .cover {
+    min-height: 100vh;
+    background: linear-gradient(145deg, #111827 0%, #1f2937 60%, #0d9488 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 2rem;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .cover-tag {
+    display: inline-block;
+    background: rgba(236,72,153,0.2);
+    border: 1px solid #ec4899;
+    color: #f9a8d4;
+    border-radius: 20px;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    letter-spacing: 0.05em;
+    position: relative;
+  }
+  .cover h1 {
+    font-size: 3rem;
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+    position: relative;
+  }
+  .cover h1 span { color: #ec4899; }
+  .cover .sub {
+    font-size: 1.15rem;
+    color: #9ca3af;
+    max-width: 520px;
+    margin-bottom: 3rem;
+    position: relative;
+  }
+  .cover-stats {
+    display: flex;
+    gap: 3rem;
+    position: relative;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cover-stat { text-align: center; }
+  .cover-stat .num { font-size: 2.2rem; font-weight: 900; color: #ec4899; }
+  .cover-stat .label { font-size: 0.8rem; color: #9ca3af; font-weight: 500; }
+  .cover-author {
+    position: absolute;
+    bottom: 2rem;
+    color: #6b7280;
+    font-size: 0.8rem;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2.5rem;
+  }
+  .page-break { page-break-before: always; }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #0d9488;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.4rem;
+  }
+  h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+  }
+  .h2-sub {
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+  p { color: #374151; font-size: 0.95rem; margin-bottom: 0.8rem; }
+  strong { color: #111827; }
+
+  .goal-box {
+    background: #fce7f3;
+    border: 1px solid #f9a8d4;
+    border-right: 4px solid #ec4899;
+    border-radius: 12px;
+    padding: 1.5rem 1.8rem;
+    margin-bottom: 2rem;
+  }
+  .goal-box .goal-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ec4899;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+  }
+  .goal-box p { font-size: 1rem; color: #111827; margin: 0; font-weight: 500; }
+
+  .criteria-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .criterion {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+  }
+  .criterion .icon { width: 28px; height: 28px; flex-shrink: 0; margin-top: 0.05rem; display:flex; align-items:center; justify-content:center; }
+  .criterion .cr-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0d9488;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
+  }
+  .criterion .cr-value { font-size: 0.88rem; color: #374151; font-weight: 500; }
+
+  .cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+  .cost-table thead tr { background: #111827; color: #fff; }
+  .cost-table thead th {
+    padding: 0.75rem 1rem;
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .cost-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+  .cost-table tbody tr:hover { background: #fafafa; }
+  .cost-table tbody td { padding: 0.65rem 1rem; color: #374151; }
+  .cost-table .free { color: #0d9488; font-weight: 700; }
+  .cost-table .cost-val { color: #ec4899; font-weight: 700; }
+  .cost-table tfoot td {
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    background: #f0fdfa;
+    color: #0d9488;
+    border-top: 2px solid #0d9488;
+  }
+
+  /* ── CIRCULAR ARCHITECTURE ── */
+  .arch-circle-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 0;
+    margin-bottom: 1.5rem;
+  }
+  .arch-circle-container {
+    position: relative;
+    width: 340px;
+    height: 340px;
+  }
+  .arch-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #111827;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 2;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+  .arch-center .c-icon { font-size: 1.6rem; }
+  .arch-center .c-label { font-size: 0.55rem; font-weight: 700; color: #0d9488; margin-top: 0.2rem; }
+  .arch-orbit-node {
+    position: absolute;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 2px solid #e5e7eb;
+  }
+  .arch-orbit-node .n-icon { font-size: 1.3rem; }
+  .arch-orbit-node .n-label { font-size: 0.5rem; font-weight: 700; color: #374151; margin-top: 0.15rem; line-height: 1.2; }
+  .n-sheets { background: #fefce8; border-color: #fde047; top: 0; left: 50%; transform: translateX(-50%); }
+  .n-supadata { background: #f0fdfa; border-color: #99f6e4; top: 25%; right: 0; }
+  .n-netlify { background: #f0fdf4; border-color: #86efac; bottom: 25%; right: 0; }
+  .n-gmail { background: #fce7f3; border-color: #f9a8d4; bottom: 0; left: 50%; transform: translateX(-50%); }
+  .n-drive { background: #eff6ff; border-color: #93c5fd; bottom: 25%; left: 0; }
+  .n-apps { background: #f5f3ff; border-color: #c4b5fd; top: 25%; left: 0; }
+  .arch-circle-note {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin-bottom: 2rem;
+  }
+
+  .steps { margin-bottom: 2rem; }
+  .step {
+    display: flex;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ec4899;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .step-title { font-size: 0.95rem; font-weight: 700; color: #111827; margin-bottom: 0.2rem; }
+  .step-desc { font-size: 0.85rem; color: #6b7280; margin: 0; }
+  .step-code {
+    background: #1f2937;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.72rem;
+    font-family: 'Courier New', monospace;
+    margin-top: 0.5rem;
+    direction: ltr;
+    text-align: left;
+  }
+  .steps-header {
+    background: #111827;
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .steps-header .sh-num { font-size: 2rem; font-weight: 900; color: #ec4899; }
+  .steps-header .sh-text { font-size: 0.9rem; color: #e5e7eb; }
+  .steps-header .sh-text strong { color: #fff; }
+
+  .challenge {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+  }
+  .ch-problem {
+    background: #fff1f2;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.82rem;
+    color: #be123c;
+    font-weight: 500;
+  }
+  .ch-arrow { display:flex; align-items:center; justify-content:center; }
+  .ch-solution {
+    background: #f0fdf4;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.82rem;
+    color: #15803d;
+    font-weight: 500;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .result-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.2rem;
+    text-align: center;
+  }
+  .result-icon { width: 40px; height: 40px; margin: 0 auto 0.5rem; display:flex; align-items:center; justify-content:center; }
+  .result-label { font-size: 0.78rem; color: #6b7280; font-weight: 500; }
+  .result-val { font-size: 1.1rem; font-weight: 800; color: #111827; margin-top: 0.2rem; }
+
+  /* ── TECH STACK CIRCLES ── */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+  .stack-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+  }
+  .stack-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto 0.7rem;
+    border: 2px solid;
+  }
+  .stack-name { font-size: 0.85rem; font-weight: 800; color: #111827; margin-bottom: 0.3rem; }
+  .stack-role { font-size: 0.75rem; color: #0d9488; font-weight: 600; margin-bottom: 0.3rem; }
+  .stack-desc { font-size: 0.72rem; color: #6b7280; line-height: 1.4; }
+
+  .divider { border: none; border-top: 1px solid #f3f4f6; margin: 2rem 0; }
+
+  .footer {
+    background: #111827;
+    color: #6b7280;
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.78rem;
+    margin-top: 4rem;
+  }
+  .footer span { color: #ec4899; }
+
+  @media print {
+    .cover { page-break-after: always; }
+    .page-break { page-break-before: always; }
+    body { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<!-- Shared gradient definitions (referenced by all SVG icons) -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden;">
+  <defs>
+    <linearGradient id="grd" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="grd-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <marker id="arr-main" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <polygon points="0 0, 8 3.5, 0 7" fill="#0d9488"/>
+    </marker>
+  </defs>
+</svg>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-tag">Case Study · מערכת חיה בפרודקשן · 2026</div>
+  <h1>מערכת אוטומציה <span>בפרודקשן</span><br>0 שרתים · ~₪22 בחודש</h1>
+  <p class="sub">Pipeline שהופך סרטון YouTube לדף ידע מעוצב בעברית -אוטומטית, מקצה לקצה. הדף הזה מתעד לא רק את ה"איך", אלא את החלטות הארכיטקטורה: מה נבחר, מה נדחה, ולמה.</p>
+  <div style="position:relative;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:10px;padding:0.7rem 1.5rem;margin-bottom:2.5rem;max-width:600px;">
+    <p style="color:#e5e7eb;font-size:0.9rem;margin:0;">הארכיטקטורה, ההחלטות והבקרה -שלי. את הקוד כתבתי עם Claude, בהנחיות ובבדיקות שלי.</p>
+  </div>
+  <div class="cover-stats">
+    <div class="cover-stat">
+      <div class="num">6</div>
+      <div class="label">כלים מחוברים</div>
+    </div>
+    <div class="cover-stat">
+      <div class="num">0</div>
+      <div class="label">שרתים</div>
+    </div>
+    <div class="cover-stat">
+      <div class="num">~₪0.55</div>
+      <div class="label">עלות לסרטון</div>
+    </div>
+    <div class="cover-stat">
+      <div class="num">24/7</div>
+      <div class="label">רץ בפרודקשן -גם כשהמחשב כבוי</div>
+    </div>
+  </div>
+  <div class="cover-author">אילת שחק שול · Operations & Systems Leader</div>
+</div>
+
+<!-- GOAL -->
+<div class="page">
+  <div class="section-label">פרק 1 -המטרה</div>
+  <h2>תהליך ידני חוזר הופך למערכת</h2>
+  <p class="h2-sub">נקודת המוצא האישית פשוטה: סיכום סרטונים תוך כדי צפייה גוזל קשב וזמן. הטיפול בה -תהליך תפעולי לכל דבר</p>
+
+  <div class="goal-box">
+    <div class="goal-title">הבעיה התפעולית</div>
+    <p>זיהיתי אצלי תהליך ידני שחוזר על עצמו: צפייה בסרטון, עצירות לרישום הערות, ותוצר שיוצא שונה בכל פעם. במקום להתייעל בתוך התהליך -הוצאתי אותו לאוטומציה מלאה, כמו שמטפלים בכל תהליך חוזר בארגון: אפיון, בחירת כלים לפי עלות מול ערך, הטמעה ומדידה. היום אני מוסיפה URL אחד -והמערכת עושה את כל השאר.</p>
+  </div>
+
+  <div class="section-label" style="margin-bottom:0.8rem">מטרות הפרויקט</div>
+  <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.8rem">
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">1</span>
+      <div><strong style="color:#111827;font-size:0.88rem">להפיק ערך מתוכן:</strong> <span style="font-size:0.88rem;color:#374151">כל סרטון שנצפה הופך לידע מובנה וקל ליישום</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">2</span>
+      <div><strong style="color:#111827;font-size:0.88rem">אפס עבודה ידנית:</strong> <span style="font-size:0.88rem;color:#374151">מוסיפה URL אחד, הכול קורה לבד</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">3</span>
+      <div><strong style="color:#111827;font-size:0.88rem">עיצוב אחיד:</strong> <span style="font-size:0.88rem;color:#374151">כל הסיכומים באותו פורמט: 3 רמות עומק + צעדי פעולה</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">4</span>
+      <div><strong style="color:#111827;font-size:0.88rem">נגישות מיידית:</strong> <span style="font-size:0.88rem;color:#374151">ספרייה מקוונת שאפשר לחפש, לסנן ולשתף</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">5</span>
+      <div><strong style="color:#111827;font-size:0.88rem">עלות אפסית:</strong> <span style="font-size:0.88rem;color:#374151">פחות מ-₪1 לסרטון, ללא תשתית שרתים</span></div>
+    </div>
+  </div>
+
+  <div class="criteria-grid">
+    <div class="criterion">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+      <div>
+        <div class="cr-label">אוטומציה</div>
+        <div class="cr-value">אני מוסיפה URL + שם סרטון -הכל מתבצע לבד</div>
+      </div>
+    </div>
+    <div class="criterion">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/></svg></div>
+      <div>
+        <div class="cr-label">שרת</div>
+        <div class="cr-value">אפס -אין מחשב פתוח, אין שרת מקומי</div>
+      </div>
+    </div>
+    <div class="criterion">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 017 7c0 3-1.8 5.4-4.4 6.6V17H9.4v-1.4C6.8 14.4 5 12 5 9a7 7 0 017-7z"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg></div>
+      <div>
+        <div class="cr-label">למידה</div>
+        <div class="cr-value">סיכום מובנה ומעוצב שאני יכולה ליישם מיד</div>
+      </div>
+    </div>
+    <div class="criterion">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+      <div>
+        <div class="cr-label">מבנה קבוע</div>
+        <div class="cr-value">3 רמות, כרטיסי כלים, קופסאות פעולה -בכל סרטון</div>
+      </div>
+    </div>
+    <div class="criterion">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div>
+        <div class="cr-label">עלות</div>
+        <div class="cr-value">~₪0.55 לסרטון -רק עלות Claude API</div>
+      </div>
+    </div>
+    <div class="criterion">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+      <div>
+        <div class="cr-label">התראה</div>
+        <div class="cr-value">מייל אוטומטי עם לינק מיד עם סיום</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- COSTS -->
+  <div class="section-label">פרק 2 -עלויות</div>
+  <h2>כמה זה עולה?</h2>
+  <p class="h2-sub">המערכת כולה פועלת על שכבות חינמיות -רק Claude API עולה כסף</p>
+
+  <table class="cost-table">
+    <thead>
+      <tr>
+        <th>כלי</th>
+        <th>תפקיד</th>
+        <th>תוכנית</th>
+        <th>עלות</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Google Sheets</strong></td>
+        <td>בסיס נתונים + סטטוס</td>
+        <td>Free</td>
+        <td class="free">₪0</td>
+      </tr>
+      <tr>
+        <td><strong>Google Apps Script</strong></td>
+        <td>Orchestration -מריץ את כל הלוגיקה</td>
+        <td>Free (6 דק' ריצה/יום)</td>
+        <td class="free">₪0</td>
+      </tr>
+      <tr>
+        <td><strong>Supadata.ai</strong></td>
+        <td>חילוץ תמלול מיוטיוב</td>
+        <td>Free (100 סרטונים/חודש)</td>
+        <td class="free">₪0</td>
+      </tr>
+      <tr>
+        <td><strong>Claude API</strong></td>
+        <td>יצירת HTML מהתמלול</td>
+        <td>Pay per use</td>
+        <td class="cost-val">~₪0.55 (~$0.15) / סרטון</td>
+      </tr>
+      <tr>
+        <td><strong>Netlify</strong></td>
+        <td>אחסון + פרסום האתר</td>
+        <td>Free (300 deploys/חודש)</td>
+        <td class="free">₪0</td>
+      </tr>
+      <tr>
+        <td><strong>Gmail</strong></td>
+        <td>שליחת התראות</td>
+        <td>Free</td>
+        <td class="free">₪0</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><strong>סך הכל לסרטון</strong></td>
+        <td><strong>~₪0.55 לסרטון · ~₪22 בחודש בקצב הנוכחי (40 סרטונים)</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p style="font-size:0.8rem; color:#9ca3af;">* מחושב על ~4K tokens קלט + ~9K tokens פלט עם claude-sonnet-4-6. ריצות פיתוח ו-debugging עולות יותר -בשימוש שוטף העלות נמוכה משמעותית.</p>
+</div>
+
+<!-- ARCHITECTURE DECISIONS -->
+<div class="page page-break">
+  <div class="section-label">פרק 3 -החלטות ארכיטקטורה</div>
+  <h2>מה נדחה -ולמה</h2>
+  <p class="h2-sub">ארכיטקטורה נמדדת גם במה שלא נבנה. שלוש ההחלטות שקבעו את המבנה -עם המספרים</p>
+
+  <table class="cost-table">
+    <thead>
+      <tr>
+        <th>אלטרנטיבה שנשקלה</th>
+        <th>למה נפסלה</th>
+        <th>מה נבחר במקום</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Make.com / n8n בענן</strong></td>
+        <td>₪34-80 בחודש, לתמיד -עלות קבועה על תהליך שרץ דקות בודדות ביום</td>
+        <td class="free">Apps Script -₪0, רץ על שרתי Google</td>
+      </tr>
+      <tr>
+        <td><strong>שרת ייעודי (VPS)</strong></td>
+        <td>עדכונים, אבטחה וזמינות -overhead תפעולי קבוע על מערכת של משתמשת אחת</td>
+        <td class="free">Serverless מלא -Apps Script + Netlify</td>
+      </tr>
+      <tr>
+        <td><strong>גישה ישירה לכתוביות YouTube</strong></td>
+        <td>YouTube חוסם בקשות תמלול משרתי Google -נשבר כבר בבדיקה הראשונה</td>
+        <td class="free">Supadata.ai -100 סרטונים בחודש בחינם</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:0.85rem; color:#6b7280;">העיקרון המנחה: עלות קבועה מוצדקת רק כשיש עומס קבוע. בעומס של דקות ביום -משלמים רק על מה שרץ בפועל. זו אותה שאלה שנכון לשאול על כל כלי בארגון: כמה הוא עולה בשנה, מול מה שהוא באמת עושה.</p>
+
+  <hr class="divider">
+
+  <div class="section-label">בקרת איכות בפרודקשן</div>
+  <h2 style="font-size:1.35rem">Code Review אחרי העלייה לאוויר -שלושה תיקונים</h2>
+  <p class="h2-sub">מערכת חיה היא מערכת שמתחזקים. ביקורת קוד על המערכת הרצה איתרה שלושה ליקויים -תוקנו ופורסמו באותו יום (v2026-06-30)</p>
+
+  <div class="challenge">
+    <div class="ch-problem">אבטחה: endpoint המחיקה היה פתוח -כל מי שהחזיק ב-URL יכול היה למחוק כל סרטון מהספרייה</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">כל פעולת מחיקה דורשת כעת קוד אדמין סודי -ניהול רק למי שמחזיק בו</div>
+  </div>
+
+  <div class="challenge">
+    <div class="ch-problem">מייל כפול נשלח לבעלת המערכת על כל סרטון חדש -כתובת הבעלים הופיעה גם ברשימת המנויים</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">תוקן שורש הבעיה (סקריפט בדיקה שנשאר פעיל) + סינון כפילויות בשליחה עצמה</div>
+  </div>
+
+  <div class="challenge">
+    <div class="ch-problem">קוד JavaScript מת זרק שגיאה שקטה בכל טעינה של עמוד הספרייה</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">הוסר -הקונסול נקי. שגיאה שקטה היום היא באג מסתורי בעוד חצי שנה</div>
+  </div>
+
+  <p style="font-size:0.85rem; color:#6b7280;">שלושת התיקונים מתועדים בפומבי ב-<a href="https://github.com/ayulaa1-supreme/youtube-pipeline" style="color:#0d9488;font-weight:700;text-decoration:none;">GitHub</a> -כולל מה גרם לכל באג ולמה נבחר דווקא התיקון הזה.</p>
+
+  <hr class="divider">
+
+  <div class="section-label">גבולות ידועים ותוכנית המשך</div>
+  <h2 style="font-size:1.35rem">מה נשבר בסקייל -ומה התוכנית</h2>
+  <p class="h2-sub">המערכת תוכננה במודע לעומס הנוכחי (~40 סרטונים בחודש). הגבולות מוכרים, מתועדים -ויש להם תוכנית</p>
+
+  <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.8rem">
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">1</span>
+      <div><strong style="color:#111827;font-size:0.88rem">Apps Script:</strong> <span style="font-size:0.88rem;color:#374151">מוגבל ל-6 דקות לריצה -מספיק לסרטון בודד, לא לעיבוד אצווה גדול</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">2</span>
+      <div><strong style="color:#111827;font-size:0.88rem">Supadata:</strong> <span style="font-size:0.88rem;color:#374151">100 סרטונים בחודש בחינם -מעבר לכך נדרשת תוכנית בתשלום</span></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:0.75rem 1rem">
+      <span style="background:linear-gradient(135deg,#0d9488,#ec4899);color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;margin-top:0.1rem">3</span>
+      <div><strong style="color:#111827;font-size:0.88rem">אחסון ב-ScriptProperties:</strong> <span style="font-size:0.88rem;color:#374151">פתרון נכון לעשרות עמודים -לא לאלפים. מעבר לכך: בסיס נתונים אמיתי</span></div>
+    </div>
+  </div>
+
+  <div class="goal-box">
+    <div class="goal-title">Roadmap -בשלבים, כל שלב עולה לאוויר לפני שמתחילים את הבא</div>
+    <p><strong>שלב 2:</strong> גרסת Multi-tenant -הרשמה עם Supabase Auth, כל משתמש מביא מפתח Claude משלו (BYOK). יעד: 3-5 משתמשים ראשונים. <strong>שלב 3:</strong> עיצובים לבחירה + subdomain אישי -השקה פומבית. בזכות מודל BYOK, עלות התפעול נשארת ~₪0 גם בגדילה.</p>
+  </div>
+</div>
+
+<!-- ARCHITECTURE + STEPS -->
+<div class="page page-break">
+  <div class="section-label">פרק 4 -איך המערכת עובדת</div>
+  <h2>מחזור חיים של סרטון</h2>
+  <p class="h2-sub">שישה כלים פועלים ברצף -הכל מתחיל ומסתיים ב-Google Sheets</p>
+
+  <!-- SVG Circular Flow Diagram -->
+  <svg viewBox="0 0 380 430" width="100%" style="max-width:440px;margin:0 auto 0.5rem;display:block;" aria-label="מחזור חיים של סרטון">
+    <circle cx="190" cy="207" r="127" fill="none" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4 5"/>
+    <line x1="190" y1="192" x2="190" y2="95" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="208" y1="200" x2="267" y2="157" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="208" y1="214" x2="267" y2="258" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="190" y1="222" x2="190" y2="319" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="172" y1="214" x2="113" y2="258" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="172" y1="200" x2="113" y2="157" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 3"/>
+    <path d="M 214 94 A 127 127 0 0 1 271 131" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arr-main)" opacity="0.7"/>
+    <path d="M 303 159 A 127 127 0 0 1 303 255" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arr-main)" opacity="0.7"/>
+    <path d="M 271 284 A 127 127 0 0 1 214 319" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arr-main)" opacity="0.7"/>
+    <path d="M 166 319 A 127 127 0 0 1 109 284" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arr-main)" opacity="0.7"/>
+    <path d="M 77 255 A 127 127 0 0 1 77 159" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arr-main)" opacity="0.7"/>
+    <path d="M 109 131 A 127 127 0 0 1 166 94" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arr-main)" opacity="0.7"/>
+    <circle cx="254" cy="93" r="12" fill="white" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="254" y="97.5" text-anchor="middle" font-size="10" font-weight="800" fill="#0d9488" font-family="Heebo,Arial">2</text>
+    <circle cx="319" cy="207" r="12" fill="white" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="319" y="211.5" text-anchor="middle" font-size="10" font-weight="800" fill="#0d9488" font-family="Heebo,Arial">3</text>
+    <circle cx="254" cy="321" r="12" fill="white" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="254" y="325.5" text-anchor="middle" font-size="10" font-weight="800" fill="#0d9488" font-family="Heebo,Arial">4</text>
+    <circle cx="126" cy="321" r="12" fill="white" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="126" y="325.5" text-anchor="middle" font-size="10" font-weight="800" fill="#0d9488" font-family="Heebo,Arial">5</text>
+    <circle cx="61" cy="207" r="12" fill="white" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="61" y="211.5" text-anchor="middle" font-size="10" font-weight="800" fill="#0d9488" font-family="Heebo,Arial">6</text>
+    <circle cx="126" cy="93" r="12" fill="white" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="126" y="97.5" text-anchor="middle" font-size="10" font-weight="800" fill="#0d9488" font-family="Heebo,Arial">7</text>
+    <rect x="127" y="190" width="126" height="34" rx="17" fill="#111827"/>
+    <g transform="translate(140, 199)" stroke="url(#grd)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="8" r="2.2"/>
+      <path d="M8 1v2M8 13v2M2.05 2.05l1.41 1.41M12.54 12.54l1.41 1.41M1 8h2M13 8h2M2.05 13.95l1.41-1.41M12.54 3.46l1.41-1.41"/>
+    </g>
+    <text x="200" y="209" text-anchor="middle" font-size="8.5" font-weight="700" fill="#0d9488" font-family="Heebo,Arial">Apps Script</text>
+    <text x="200" y="219" text-anchor="middle" font-size="7" fill="#9ca3af" font-family="Heebo,Arial">Orchestrator</text>
+    <rect x="144" y="67" width="92" height="27" rx="13.5" fill="white" stroke="#f59e0b" stroke-width="2"/>
+    <text x="190" y="84.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#111827" font-family="Heebo,Arial">Google Sheets</text>
+    <circle cx="226" cy="64" r="10" fill="#ec4899"/>
+    <text x="226" y="68" text-anchor="middle" font-size="9" font-weight="800" fill="white" font-family="Heebo,Arial">1</text>
+    <rect x="258" y="131" width="90" height="27" rx="13.5" fill="white" stroke="#0d9488" stroke-width="2"/>
+    <text x="303" y="148.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#111827" font-family="Heebo,Arial">Supadata API</text>
+    <rect x="258" y="255" width="90" height="27" rx="13.5" fill="#111827" stroke="#ec4899" stroke-width="1.5"/>
+    <text x="303" y="272.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="white" font-family="Heebo,Arial">Claude API</text>
+    <rect x="144" y="319" width="92" height="27" rx="13.5" fill="white" stroke="#0d9488" stroke-width="2"/>
+    <text x="190" y="336.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#111827" font-family="Heebo,Arial">Google Drive</text>
+    <rect x="32" y="255" width="90" height="27" rx="13.5" fill="white" stroke="#0d9488" stroke-width="2"/>
+    <text x="77" y="272.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#111827" font-family="Heebo,Arial">Netlify</text>
+    <rect x="32" y="131" width="90" height="27" rx="13.5" fill="white" stroke="#ec4899" stroke-width="2"/>
+    <text x="77" y="148.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#111827" font-family="Heebo,Arial">Gmail</text>
+    <text x="190" y="394" text-anchor="middle" font-size="8.5" fill="#9ca3af" font-family="Heebo,Arial">הכל רץ על שרתי Google -המחשב יכול להיות כבוי</text>
+    <text x="190" y="412" text-anchor="middle" font-size="8.5" fill="#0d9488" font-family="Heebo,Arial">1 = הוספה ידנית · 2-7 = אוטומטי לחלוטין</text>
+  </svg>
+
+  <!-- STEPS -->
+  <div class="section-label">פרק 5 -צעדי הביצוע</div>
+  <h2>7 צעדים פשוטים</h2>
+  <p class="h2-sub">מהכנסת URL ועד קבלת המייל -הכל אוטומטי מלבד הצעד הראשון</p>
+
+  <div class="steps-header">
+    <div class="sh-num">7</div>
+    <div class="sh-text"><strong>צעדים בלבד</strong> -אני עושה רק את הצעד הראשון.<br>שאר 6 הצעדים מתרחשים אוטומטית מיידית.</div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title" style="display:flex;align-items:center;gap:0.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="url(#grd-gold)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>אני מוסיפה URL + שם הסרטון ל-Google Sheet</div>
+        <p class="step-desc">זה הדבר היחיד שאני עושה ידנית. הנושא אופציונלי -אם לא מוסיפה, המערכת מסיקה לבד.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Trigger אוטומטי עם שינוי בשיט -אוטומטי</div>
+        <p class="step-desc">Google Apps Script מופעל ברגע שמוסיפים URL חדש לשיט. אין המתנה - הסקריפט מתחיל לעבד מיד.</p>
+        <div class="step-code">ScriptApp.newTrigger("processNewVideos").forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet()).onChange().create()</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">חילוץ תמלול -Supadata API -אוטומטי</div>
+        <p class="step-desc">הסקריפט שולח את ה-URL ל-Supadata.ai ומקבל תמלול טקסטואלי מלא של הסרטון.</p>
+        <div class="step-code">GET api.supadata.ai/v1/youtube/transcript?url=...</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">יצירת סיכום HTML -Claude API -אוטומטי</div>
+        <p class="step-desc">התמלול + Prompt עם CSS מלא + הוראות מבנה - Claude מחזיר דף HTML מעוצב בעברית RTL.</p>
+        <div class="step-code">POST api.anthropic.com/v1/messages · claude-sonnet-4-6 · max_tokens: 16000</div>
+
+        <details class="prompt-box" style="margin-top:1rem;">
+          <summary style="cursor:pointer;display:flex;align-items:center;gap:0.6rem;list-style:none;padding:0.75rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:0.85rem;font-weight:700;color:#111827;user-select:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            הפרומפט המלא ששלחתי ל-Claude
+            <span style="margin-right:auto;font-size:0.72rem;font-weight:500;color:#9ca3af;">לחצי לפתיחה</span>
+          </summary>
+          <div style="position:relative;margin-top:0.5rem;">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('prompt-text').innerText).then(()=>{this.textContent='✓ הועתק';setTimeout(()=>this.textContent='העתקי Prompt',1800)})" style="position:absolute;top:0.6rem;left:0.6rem;background:#111827;color:#0d9488;border:1px solid #0d9488;border-radius:6px;padding:0.3rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">העתקי Prompt</button>
+            <pre id="prompt-text" style="background:#111827;color:#e5e7eb;border-radius:10px;padding:1.2rem 1rem 1rem;font-size:0.72rem;line-height:1.7;overflow-x:auto;white-space:pre-wrap;direction:ltr;text-align:left;margin:0;">You generate a complete RTL Hebrew HTML summary page from a YouTube transcript.
+
+IRON RULE: ONLY content from the transcript. Zero inventions. Zero additions.
+If something is NOT explicitly said in the transcript - do NOT write it. Not as an example, not as a tip, not as an explanation. If the transcript has only 2 tools, write 2 - not 3. If a name or concept is not mentioned - do not add it. Every sentence must be traceable to the transcript.
+
+Title: [כותרת הסרטון]
+Source: [URL של הסרטון]
+
+[כאן מוכנסת חבילת CSS מלאה - ראי קוד Apps Script]
+
+Build this EXACT HTML structure:
+
+1. &lt;a href='/' class='back'&gt;חזרה לכל הסרטונים&lt;/a&gt;
+
+2. .hero: .tag (speaker+date), h1 (Hebrew title), .subtitle (one sentence),
+   &lt;a class='yt' href='SOURCE_URL'&gt;&#9654; לסרטון המקורי&lt;/a&gt;
+
+3. .central-idea: core message of the video
+
+4. .level (רמה 1): .level-badge 'רמה 1', h2, .tagline,
+   .tool-grid with .tool-card items (each tool: .tool-name + p description),
+   .actions-box with ol&gt;li actionable steps
+
+5. .level (רמה 2): .level-badge 'רמה 2', h2, .tagline,
+   .context-ways with .way items (.way-num + p for each approach),
+   .actions-box
+
+6. .level (רמה 3): .level-badge 'רמה 3', h2, .tagline,
+   .definition-box (exact quote translated to Hebrew + original in parentheses),
+   .context-ways, .example-box, .system-grid, .actions-box
+
+7. .final-message: closing thought + .source with links
+
+8. &lt;script&gt; IntersectionObserver adds class 'anim-fadeup' to '.anim-ready' elements
+
+NO dark backgrounds except .definition-box.
+Mixed Hebrew/English titles: add dir='rtl' to h1, wrap English in &lt;bdi&gt; tags.
+Quotes in .definition-box: translate to Hebrew, original English in parentheses.
+Return complete HTML only. No markdown fences.
+
+TRANSCRIPT:
+[התמלול המלא - עד 12,000 תווים]</pre>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div>
+        <div class="step-title">גיבוי ל-Google Drive -אוטומטי</div>
+        <p class="step-desc">שומר עותק של ה-HTML ב-Drive לשימוש עתידי בפריסות הבאות.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div>
+        <div class="step-title">פרסום ל-Netlify -אוטומטי</div>
+        <p class="step-desc">בונה index page מעודכן עם כל הסרטונים, ארוז ZIP ופורס ל-Netlify. האתר חי תוך שניות.</p>
+        <div class="step-code">POST api.netlify.com/api/v1/sites/{site}/deploys · body: zip</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">7</div>
+      <div>
+        <div class="step-title">מייל + עדכון שיט -אוטומטי</div>
+        <p class="step-desc">Gmail שולח מייל עם לינק ישיר לסיכום. השיט מתעדכן: Done + תאריך + לינק Netlify.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE OUTPUT PREVIEW -->
+<div class="page page-break">
+  <div class="section-label">פרק 6 -התוצאה בפועל</div>
+  <h2>ככה זה נראה</h2>
+  <p class="h2-sub">תצוגה חיה של הפלט הסופי - הספרייה ודוגמה לסיכום</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:1.5rem;">
+
+    <!-- Library preview -->
+    <div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <span style="font-size:0.78rem;font-weight:700;color:#0d9488;text-transform:uppercase;letter-spacing:0.05em;">ספריית הסרטונים</span>
+      </div>
+      <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <div style="background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:0.5rem 0.75rem;display:flex;align-items:center;gap:0.5rem;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#f87171;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+          <span style="flex:1;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:0.2rem 0.6rem;font-size:0.68rem;color:#6b7280;margin:0 0.4rem;direction:ltr;text-align:left;">ayelet-yt-summaries.netlify.app</span>
+        </div>
+        <div style="height:320px;overflow:hidden;position:relative;">
+          <iframe id="lib-iframe"
+            style="width:143%;height:457px;border:none;display:block;transform:scale(0.7);transform-origin:top right;"
+            scrolling="no"
+            title="ספריית סרטונים">
+          </iframe>
+        </div>
+        <script>
+        document.getElementById('lib-iframe').srcdoc = `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><style>@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Heebo,Arial,sans-serif;direction:rtl;background:#fafafa;background-image:linear-gradient(rgba(0,0,0,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.035) 1px,transparent 1px);background-size:28px 28px;color:#111827}.hero{background:#fff;border-bottom:1px solid #f0f0f0;padding:1.4rem 1.6rem 1.2rem;position:relative;display:flex;align-items:center;justify-content:space-between;gap:1rem}.hero::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#0d9488,#ec4899,#0d9488)}.hero-inner{animation:fadeUp .5s both}h1{font-size:1.4rem;font-weight:800;color:#111827;margin-bottom:.1rem;line-height:1.3}h1 em{font-style:normal;color:#ec4899}.sub{font-size:.78rem;color:#9ca3af}.stats{display:flex;align-items:center;gap:1.2rem;flex-shrink:0}.stat{text-align:center}.stat-num{display:block;font-size:1.3rem;font-weight:800;color:#ec4899;line-height:1}.stat-num.teal{color:#0d9488}.stat-label{font-size:.65rem;color:#b0b7c3;font-weight:500;margin-top:.1rem}.container{max-width:860px;margin:0 auto;padding:1.2rem 1rem 3rem}.sub-card{background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:1rem 1.2rem;margin:0 0 1rem}.sub-row{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}.sub-input{flex:1;min-width:140px;border:1px solid #e5e7eb;border-radius:8px;padding:.5rem .75rem;font-family:Heebo,Arial,sans-serif;font-size:.82rem;direction:rtl}.sub-btn{background:#ec4899;color:#fff;border:none;border-radius:8px;padding:.5rem 1rem;font-weight:700;font-size:.82rem;cursor:pointer}.sub-title{font-size:.82rem;font-weight:700;color:#111827}.sub-title span{color:#ec4899}.topic-section{background:#fff;border:1px solid #efefef;border-radius:14px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 1px 6px rgba(0,0,0,0.04);animation:fadeUp .6s both}.topic-header{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid #f5f5f5}.topic-pill{display:flex;align-items:center;gap:.4rem;background:#f0fdf9;border:1px solid #99f6e4;border-radius:20px;padding:.25rem .7rem .25rem .5rem}.topic-name{font-size:.85rem;font-weight:700;color:#0d9488}.topic-count{margin-right:auto;background:#fce7f3;color:#ec4899;border:1px solid #fbcfe8;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0}.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem}.video-card{background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;padding:1rem;text-decoration:none;color:inherit;display:block}.card-topic{font-size:.65rem;color:#0d9488;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.3rem}.card-title{font-size:.83rem;font-weight:600;color:#111827;line-height:1.4;margin-bottom:.5rem}.card-date{font-size:.68rem;color:#b0b7c3}.nav-btns{text-align:center;padding:1.2rem 1rem .5rem;display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem}.footer-credit{text-align:center;padding:1rem;font-size:.75rem;color:#b0b7c3;border-top:1px solid #f0f0f0}</style></head><body><div class="hero"><div class="hero-inner"><h1>ספריית <em>הסיכומים</em> שלי</h1><p class="sub">סיכומים מדויקים - רק מה שנאמר, עם צעדי פעולה</p></div><div class="stats"><div class="stat"><span class="stat-num">4</span><span class="stat-label">סרטונים</span></div><div class="stat"><span class="stat-num teal">3</span><span class="stat-label">נושאים</span></div></div></div><div class="container"><div class="sub-card"><div class="sub-title">📬 סיכומים חדשים <span>ישירות למייל</span></div><div class="sub-row"><input type="email" class="sub-input" placeholder="המייל שלך..."><button class="sub-btn">הרשמה</button></div></div><div class="topic-section"><div class="topic-header"><div class="topic-pill"><span class="topic-name">AI Tools</span></div><span class="topic-count">2</span></div><div class="video-grid"><a href="#" class="video-card"><div class="card-topic">AI Tools</div><div class="card-title">Building AI Agents with Claude - A Complete Guide</div><div class="card-date">15 יוני 2026</div></a><a href="#" class="video-card"><div class="card-topic">AI Tools</div><div class="card-title">How to Use Claude API for Automation</div><div class="card-date">22 יוני 2026</div></a></div></div><div class="topic-section"><div class="topic-header"><div class="topic-pill"><span class="topic-name">Productivity</span></div><span class="topic-count">1</span></div><div class="video-grid"><a href="#" class="video-card"><div class="card-topic">Productivity</div><div class="card-title">10 Automation Tricks That Save 5 Hours a Week</div><div class="card-date">10 יוני 2026</div></a></div></div><div class="nav-btns"><a href="#" style="display:inline-flex;align-items:center;background:#0d9488;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;font-size:.8rem">Case Study</a> <a href="#" style="display:inline-flex;align-items:center;background:#ec4899;color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-weight:700;font-size:.8rem">אודות</a></div><div class="footer-credit">נבנה עם 💛 <b>Claude</b> · אילת שחק שול · 2026</div></div></body></html>`;
+        </script>
+      </div>
+    </div>
+
+    <!-- Summary page preview -->
+    <div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span style="font-size:0.78rem;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:0.05em;">דוגמה לסיכום סרטון</span>
+      </div>
+      <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <div style="background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:0.5rem 0.75rem;display:flex;align-items:center;gap:0.5rem;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#f87171;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+          <span style="flex:1;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:0.2rem 0.6rem;font-size:0.68rem;color:#6b7280;margin:0 0.4rem;direction:ltr;text-align:left;">ayelet-yt-summaries.netlify.app/msFxQ7OYPj8.html</span>
+        </div>
+        <div style="height:320px;overflow:hidden;position:relative;">
+          <iframe src="https://ayelet-yt-summaries.netlify.app/msFxQ7OYPj8.html"
+            style="width:143%;height:457px;border:none;display:block;transform:scale(0.7);transform-origin:top right;"
+            scrolling="no"
+            loading="lazy"
+            title="סיכום סרטון לדוגמה">
+          </iframe>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- EMAIL MOCKUP -->
+  <div style="margin-top:1.4rem;">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span style="font-size:0.78rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">מייל אוטומטי - Gmail</span>
+    </div>
+    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+      <div style="background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:0.5rem 0.75rem;display:flex;align-items:center;gap:0.5rem;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#f87171;display:inline-block;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+        <span style="flex:1;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:0.2rem 0.6rem;font-size:0.68rem;color:#6b7280;margin:0 0.4rem;direction:ltr;text-align:left;">mail.google.com</span>
+      </div>
+      <div style="background:#fff;padding:0;direction:ltr;">
+        <div style="padding:0.9rem 1.2rem;border-bottom:1px solid #f3f4f6;">
+          <div style="font-size:1rem;font-weight:600;color:#111827;margin-bottom:0.5rem;">
+            New summary ready!: The AI Tools You'll ACTUALLY Use in 2026
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#0d9488);display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700;flex-shrink:0;">YB</div>
+              <div>
+                <span style="font-size:0.8rem;font-weight:600;color:#111827;">YouTube Doc Bot</span>
+                <span style="font-size:0.75rem;color:#9ca3af;margin-right:0.3rem;">&lt;ayulaa1@gmail.com&gt;</span>
+              </div>
+            </div>
+            <span style="font-size:0.72rem;color:#9ca3af;">7:57</span>
+          </div>
+        </div>
+        <div style="padding:1.5rem 1.2rem;max-width:520px;margin:0 auto;text-align:center;">
+          <h2 style="color:#ec4899;font-size:1.3rem;font-weight:700;margin-bottom:1.2rem;font-family:Arial,sans-serif;">!New summary ready</h2>
+          <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:10px;padding:1rem;margin-bottom:1.2rem;text-align:right;">
+            <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.3rem;text-align:left;"><strong>Video:</strong> <a href="#" style="color:#0d9488;text-decoration:none;">The AI Tools You'll ACTUALLY Use in 2026</a></div>
+            <div style="font-size:0.82rem;color:#6b7280;text-align:left;"><strong>Topic:</strong> AI Tools</div>
+          </div>
+          <div style="display:flex;gap:0.75rem;justify-content:center;margin-bottom:1.2rem;">
+            <a href="#" style="background:#ec4899;color:white;text-decoration:none;padding:0.6rem 1.4rem;border-radius:6px;font-size:0.85rem;font-weight:600;font-family:Arial,sans-serif;">Open summary</a>
+            <a href="#" style="background:#0d9488;color:white;text-decoration:none;padding:0.6rem 1.4rem;border-radius:6px;font-size:0.85rem;font-weight:600;font-family:Arial,sans-serif;">All videos</a>
+          </div>
+          <p style="font-size:0.72rem;color:#b0b7c3;font-family:Arial,sans-serif;">This message was sent automatically by your YouTube summary pipeline</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- CHALLENGES + RESULTS -->
+<div class="page page-break">
+  <div class="section-label">פרק 7 -אתגרים ופתרונות</div>
+  <h2>מה לא היה פשוט?</h2>
+  <p class="h2-sub">חמישה אתגרים שפתרתי בדרך -כל אחד לימד משהו</p>
+
+  <div class="challenge">
+    <div class="ch-problem">YouTube חסם גישה ישירה לכתוביות משרתי Google</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">Supadata.ai -API ייעודי לתמלול יוטיוב, עובד ויציב</div>
+  </div>
+
+  <div class="challenge">
+    <div class="ch-problem">Claude יצר HTML גנרי שלא התאים לעיצוב שרציתי</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">הכנסת CSS מלא + הוראות מבנה מדויקות לתוך ה-Prompt</div>
+  </div>
+
+  <div class="challenge">
+    <div class="ch-problem">Claude המציא מידע שלא היה בתמלול</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">IRON RULE: "כל משפט חייב להיות ניתן למעקב לתמלול"</div>
+  </div>
+
+  <div class="challenge">
+    <div class="ch-problem">כותרות עברית/אנגלית נשברו בתצוגה RTL</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">&lt;bdi&gt; tags + dir="rtl" מפורש על h1</div>
+  </div>
+
+  <div class="challenge">
+    <div class="ch-problem">סרטון קודם נמחק מהאתר בכל פריסה חדשה</div>
+    <div class="ch-arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+    <div class="ch-solution">שמירת HTML ב-ScriptProperties + סינק in-memory של הסטטוס</div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">פרק 8 -תוצאות</div>
+  <h2>מה השגתי?</h2>
+  <p class="h2-sub">נתוני אמת מהמערכת החיה -נכון ל-6.7.2026</p>
+
+  <div class="results-grid">
+    <div class="result-card">
+      <div class="result-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="result-label">זמן לסיכום</div>
+      <div class="result-val">~3 דק' במקום ~30 ידניות</div>
+    </div>
+    <div class="result-card">
+      <div class="result-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="result-label">שימוש בפועל</div>
+      <div class="result-val">10 סרטונים · 3 נושאים</div>
+    </div>
+    <div class="result-card">
+      <div class="result-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/></svg></div>
+      <div class="result-label">עבודה ידנית</div>
+      <div class="result-val">URL + שם בלבד</div>
+    </div>
+    <div class="result-card">
+      <div class="result-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div class="result-label">עלות</div>
+      <div class="result-val">~₪0.55 לסרטון</div>
+    </div>
+    <div class="result-card">
+      <div class="result-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div>
+      <div class="result-label">נגישות</div>
+      <div class="result-val">URL ציבורי</div>
+    </div>
+    <div class="result-card">
+      <div class="result-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></div>
+      <div class="result-label">הפעלה</div>
+      <div class="result-val">אוטומטית onChange</div>
+    </div>
+  </div>
+
+  <div style="background:#f0fdfa; border:1px solid #99f6e4; border-right:4px solid #0d9488; border-radius:12px; padding:1.2rem 1.6rem; margin-top:1.5rem;">
+    <p style="margin:0; font-size:0.92rem; color:#111827;"><strong>בשורה תפעולית אחת:</strong> 10 הסרטונים שעובדו עד כה החזירו לי כ-4 שעות קשב (בהערכה שמרנית של ~25 דקות סיכום ידני לסרטון) -בעלות שוטפת כוללת של ~₪5.5. בקצב מלא של 40 סרטונים בחודש: ~16 שעות בחודש, תמורת ~₪22.</p>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">פרק 9 -Stack טכנולוגי</div>
+  <h2>הכלים שבנו את המערכת</h2>
+  <p class="h2-sub">כל כלי נבחר לתפקיד ספציפי -אפס כפילויות</p>
+
+  <div class="stack-grid">
+    <div class="stack-card">
+      <div class="stack-circle" style="background:#fffbeb; border-color:#f59e0b;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="2"/>
+          <line x1="2" y1="8" x2="22" y2="8"/>
+          <line x1="2" y1="14" x2="22" y2="14"/>
+          <line x1="9" y1="2" x2="9" y2="22"/>
+        </svg>
+      </div>
+      <div class="stack-name">Google Sheets</div>
+      <div class="stack-role">מקור נתונים</div>
+      <div class="stack-desc">הממשק היחיד שאני נוגעת בו -הכנסת URL ושם הסרטון</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-circle" style="background:#111827; border-color:#0d9488;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+        </svg>
+      </div>
+      <div class="stack-name">Apps Script</div>
+      <div class="stack-role">Orchestration</div>
+      <div class="stack-desc">מריץ את כל הלוגיקה על שרתי Google -ללא צורך במחשב פתוח</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-circle" style="background:#f0fdfa; border-color:#0d9488;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="8" y="1" width="8" height="12" rx="4"/>
+          <path d="M4 10a8 8 0 0016 0"/>
+          <line x1="12" y1="20" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+      <div class="stack-name">Supadata.ai</div>
+      <div class="stack-role">תמלול</div>
+      <div class="stack-desc">מחלץ תמלול מלא מסרטוני YouTube -הפתרון שעקף את חסימת Google</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-circle" style="background:#111827; border-color:#ec4899;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="5" width="20" height="14" rx="2"/>
+          <circle cx="8" cy="12" r="2"/>
+          <circle cx="16" cy="12" r="2"/>
+          <path d="M12 1v4"/>
+          <circle cx="12" cy="2" r="1.2"/>
+          <line x1="5" y1="5" x2="5" y2="2"/>
+          <line x1="19" y1="5" x2="19" y2="2"/>
+        </svg>
+      </div>
+      <div class="stack-name">Claude API</div>
+      <div class="stack-role">יצירת HTML</div>
+      <div class="stack-desc">הופך תמלול גולמי לדף סיכום מובנה ומעוצב בעברית</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-circle" style="background:#f0fdfa; border-color:#0d9488;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
+        </svg>
+      </div>
+      <div class="stack-name">Netlify</div>
+      <div class="stack-role">אחסון ופרסום</div>
+      <div class="stack-desc">מאחסן ומפרסם את כל הסיכומים -URL ציבורי לכל סרטון</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-circle" style="background:#fce7f3; border-color:#ec4899;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="url(#grd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M2 7l10 7 10-7"/>
+        </svg>
+      </div>
+      <div class="stack-name">Gmail</div>
+      <div class="stack-role">התראות</div>
+      <div class="stack-desc">שולח מייל עם לינק ישיר ברגע שהסיכום מוכן</div>
+    </div>
+  </div>
+
+  <div style="background:#fce7f3; border:1px solid #f9a8d4; border-right:4px solid #ec4899; border-radius:12px; padding:1.5rem 1.8rem; margin-top:1rem;">
+    <div style="font-size:0.75rem; font-weight:700; color:#ec4899; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem;">המסקנה המרכזית</div>
+    <p style="font-size:1rem; color:#111827; font-weight:500; margin:0;">
+      הכוח של המערכת הזו הוא <strong>הפרדת אחריות</strong> -כל כלי עושה בדיוק את מה שהוא הכי טוב בו. Apps Script מתזמר, Supadata מחלץ, Claude יוצר, Netlify מפרסם. אני לא מסכמת תוך כדי צפייה. פשוט מקשיבה -ומקבלת ידע מוכן ליישום.
+    </p>
+  </div>
+</div>
+
+<div style="text-align:center;padding:2.5rem 1rem 0;display:flex;flex-wrap:wrap;justify-content:center;gap:.75rem">
+  <a href="/" style="display:inline-flex;align-items:center;background:#0d9488;color:#fff;padding:.7rem 1.6rem;border-radius:10px;text-decoration:none;font-weight:700;font-size:.9rem;transition:opacity .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">ספריית הסיכומים שלי</a>
+  <a href="/about.html" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'" style="display:inline-flex;align-items:center;background:#ec4899;color:#fff;padding:.7rem 1.6rem;border-radius:10px;text-decoration:none;font-weight:700;font-size:.9rem;transition:opacity .2s">אודות הפרויקט</a>
+</div>
+
+<div class="footer">
+  נבנה עם ❤️ ו-<span>Claude</span> · אילת שחק שול · 2026
+</div>
+
+</body>
+</html>
