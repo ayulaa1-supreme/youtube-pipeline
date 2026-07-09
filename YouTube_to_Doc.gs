@@ -131,6 +131,23 @@ function processPendingVideos() {
 // ===========================================
 // NETLIFY DEPLOY
 // ===========================================
+// Static pages (about.html, casestudy, etc.) from the Drive folder.
+// A Netlify ZIP deploy replaces the WHOLE site, so any deploy path that
+// skips these files silently deletes them from production. Every deploy
+// path must call this.
+function addStaticPageBlobs_(blobs) {
+  if (!CONFIG.STATIC_PAGES_FOLDER_ID) return;
+  try {
+    const folder = DriveApp.getFolderById(CONFIG.STATIC_PAGES_FOLDER_ID);
+    const files = folder.getFilesByType(MimeType.HTML);
+    while (files.hasNext()) {
+      const f = files.next();
+      blobs.push(Utilities.newBlob(f.getBlob().getDataAsString(), "text/html", f.getName()));
+      Logger.log("Added static page: " + f.getName());
+    }
+  } catch(e) { Logger.log("Static pages folder error: " + e.message); }
+}
+
 function deployAllToNetlify(sheet, data, newHtml, newVideoId, newTitle, newTopic, newRowIndex) {
   const videos = [];
   data.forEach((row, i) => {
@@ -179,6 +196,8 @@ function deployAllToNetlify(sheet, data, newHtml, newVideoId, newTitle, newTopic
       }
     } catch(e) { Logger.log("Drive search failed for: " + v.videoId + " — " + e.message); }
   });
+
+  addStaticPageBlobs_(blobs); // without this, every new-video deploy wipes the static pages
 
   const zipBlob = Utilities.zip(blobs, "deploy.zip");
   const deployResp = UrlFetchApp.fetch(
@@ -940,18 +959,7 @@ function redeployIndex() {
     if (html) blobs.push(Utilities.newBlob(html, "text/html", v.videoId + ".html"));
   });
 
-  // Static pages (about.html, casestudy, etc.) from Drive folder
-  if (CONFIG.STATIC_PAGES_FOLDER_ID) {
-    try {
-      const folder = DriveApp.getFolderById(CONFIG.STATIC_PAGES_FOLDER_ID);
-      const files = folder.getFilesByType(MimeType.HTML);
-      while (files.hasNext()) {
-        const f = files.next();
-        blobs.push(Utilities.newBlob(f.getBlob().getDataAsString(), "text/html", f.getName()));
-        Logger.log("Added static page: " + f.getName());
-      }
-    } catch(e) { Logger.log("Static pages folder error: " + e.message); }
-  }
+  addStaticPageBlobs_(blobs);
 
   const zipBlob = Utilities.zip(blobs, "deploy.zip");
   const resp = UrlFetchApp.fetch(
