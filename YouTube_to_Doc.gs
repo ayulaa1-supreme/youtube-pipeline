@@ -96,7 +96,7 @@ function processPendingVideos() {
       const transcript = getYouTubeTranscript(url);
       if (!transcript) throw new Error("No transcript found");
 
-      const html = generateHTMLWithClaude(transcript, title, url);
+      const html = generateValidatedHtml_(transcript, title, url);
 
       // Store HTML in ScriptProperties by videoId — reliable lookup for future deploys
       PropertiesService.getScriptProperties().setProperty("vid_html_" + videoId, html);
@@ -609,6 +609,62 @@ function generateHTMLWithClaude(transcript, title, sourceUrl) {
   const htmlMatch = text.match(/```html\n?([\s\S]*?)```/) ||
                     text.match(/(<!DOCTYPE[\s\S]*<\/html>)/i);
   return htmlMatch ? htmlMatch[1].trim() : text.trim();
+}
+
+// ===========================================
+// QUALITY GATE
+// ===========================================
+// A summary page goes public (Netlify) and lands in inboxes the moment it is
+// generated, so it must be checked BEFORE deploy, not after. The gate verifies
+// the structure the prompt demands; content quality stays on the prompt's
+// IRON RULE. Claude output varies between calls, so one retry is worth it;
+// a second failure marks the row Error and alerts the owner instead of
+// publishing a broken page.
+function validateSummaryHtml_(html) {
+  const problems = [];
+  if (!html || html.length < 3000) {
+    problems.push("page too short (" + (html ? html.length : 0) + " chars)");
+    return problems;
+  }
+  if (!/<\/html>\s*$/i.test(html)) problems.push("truncated - no closing </html>");
+  if (html.indexOf("```") !== -1) problems.push("markdown fences left in output");
+  if (!/<style/i.test(html)) problems.push("missing <style> block");
+  if (!/dir=["']?rtl/i.test(html)) problems.push("no RTL direction");
+  // Content sections only — cosmetic parts (page-footer) are not worth
+  // blocking a publish over: 7 of the first 12 production pages lack the
+  // footer and are perfectly usable.
+  ["hero", "central-idea", "level-badge", "final-message"].forEach(function(cls) {
+    if (html.indexOf(cls) === -1) problems.push("missing section: ." + cls);
+  });
+  const h1 = extractHebrewTitle(html);
+  if (!h1 || !/[א-ת]/.test(h1)) problems.push("h1 missing or not Hebrew");
+  return problems;
+}
+
+function generateValidatedHtml_(transcript, title, sourceUrl) {
+  let problems = [];
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const html = generateHTMLWithClaude(transcript, title, sourceUrl);
+    problems = validateSummaryHtml_(html);
+    if (problems.length === 0) return html;
+    Logger.log("Quality gate attempt " + attempt + " failed: " + problems.join("; "));
+  }
+  sendQualityAlert_(title, sourceUrl, problems);
+  throw new Error("Quality gate: " + problems.join("; "));
+}
+
+function sendQualityAlert_(title, sourceUrl, problems) {
+  try {
+    GmailApp.sendEmail(CONFIG.EMAIL_TO, "Summary failed quality gate: " + title, "", {
+      htmlBody: '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">' +
+        '<h2 style="color:#ec4899;">הסיכום לא עמד בתקן ולא פורסם</h2>' +
+        '<p><strong>סרטון:</strong> <a href="' + sourceUrl + '">' + title + '</a></p>' +
+        '<p><strong>מה נמצא (אחרי שני ניסיונות):</strong></p>' +
+        '<ul>' + problems.map(function(p) { return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+        '<p>הסרטון מסומן Error בגיליון. מחיקת הסטטוס תפעיל ניסיון חדש.</p></div>',
+      name: "YouTube Doc Bot"
+    });
+  } catch (e) { Logger.log("Quality alert email failed: " + e.message); }
 }
 
 function buildPrompt(transcript, title, sourceUrl) {
