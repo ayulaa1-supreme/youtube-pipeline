@@ -31,8 +31,38 @@ const CONFIG = {
   TOPICS:                 ["AI Tools", "Productivity", "Entrepreneurship"],
   WEBAPP_URL:             prop_("WEBAPP_URL"),              // fill after Deploy as Web App (the /exec URL)
   ADMIN_CODE:             prop_("ADMIN_CODE"),              // long random string — authorizes deletions
-  SUBSCRIBERS_SHEET:      "Subscribers"
+  SUBSCRIBERS_SHEET:      "Subscribers",
+  // Hebrew display names for topics. Sheet values stay in English.
+  TOPIC_LABELS:           { "AI Tools": "כלי AI", "Productivity": "פרודוקטיביות", "Entrepreneurship": "יזמות", "General": "כללי" }
 };
+
+// Display label for a topic (falls back to the raw sheet value)
+function topicLabel_(t) { return CONFIG.TOPIC_LABELS[t] || t; }
+
+// Public base URL of the library site
+function siteUrl_() { return "https://" + CONFIG.NETLIFY_SITE + ".netlify.app"; }
+
+// Escape text for safe use inside HTML attributes / text
+function escHtml_(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Share preview (WhatsApp / LinkedIn) tags for a summary page.
+// Summary HTML comes from Claude without them, so they are injected at deploy time.
+function addShareMeta_(html, title, videoId) {
+  if (!html || /property=["']og:title/i.test(html)) return html;
+  var t = escHtml_(title || "סיכום סרטון");
+  var tags =
+    '<meta name="description" content="' + t + ' | סיכום בעברית: רק מה שנאמר, עם צעדי פעולה">' +
+    '<meta property="og:type" content="article"><meta property="og:locale" content="he_IL">' +
+    '<meta property="og:site_name" content="ספריית הסיכומים | אילת שחק שול">' +
+    '<meta property="og:title" content="' + t + '">' +
+    '<meta property="og:description" content="סיכום בעברית: רק מה שנאמר, עם צעדי פעולה">' +
+    '<meta property="og:url" content="' + siteUrl_() + '/' + videoId + '.html">' +
+    '<meta property="og:image" content="' + siteUrl_() + '/og-library.png">' +
+    '<meta name="twitter:card" content="summary_large_image">';
+  return /<\/head>/i.test(html) ? html.replace(/<\/head>/i, tags + "</head>") : html;
+}
 
 // Fail fast with a clear message instead of a cryptic 401 somewhere downstream.
 function assertConfig_() {
@@ -139,11 +169,22 @@ function addStaticPageBlobs_(blobs) {
   if (!CONFIG.STATIC_PAGES_FOLDER_ID) return;
   try {
     const folder = DriveApp.getFolderById(CONFIG.STATIC_PAGES_FOLDER_ID);
-    const files = folder.getFilesByType(MimeType.HTML);
+    const allowed = ["text/html", "image/png", "image/jpeg", "image/svg+xml", "image/webp"];
+    const files = folder.getFiles();
     while (files.hasNext()) {
       const f = files.next();
-      blobs.push(Utilities.newBlob(f.getBlob().getDataAsString(), "text/html", f.getName()));
-      Logger.log("Added static page: " + f.getName());
+      const name = f.getName();
+      const mime = f.getMimeType();
+      if (allowed.indexOf(mime) === -1) continue;
+      // Summary backups (<title>_<videoId>.html) may live in the same folder.
+      // They are already deployed as <videoId>.html, so skip the duplicates.
+      if (/_[A-Za-z0-9_-]{11}\.html$/.test(name)) continue;
+      if (mime === "text/html") {
+        blobs.push(Utilities.newBlob(f.getBlob().getDataAsString(), "text/html", name));
+      } else {
+        blobs.push(f.getBlob().setName(name));
+      }
+      Logger.log("Added static file: " + name);
     }
   } catch(e) { Logger.log("Static pages folder error: " + e.message); }
 }
@@ -171,14 +212,14 @@ function deployAllToNetlify(sheet, data, newHtml, newVideoId, newTitle, newTopic
   const blobs = [];
 
   blobs.push(Utilities.newBlob(buildIndexPage(videos), "text/html", "index.html"));
-  blobs.push(Utilities.newBlob(newHtml, "text/html", newVideoId + ".html"));
+  blobs.push(Utilities.newBlob(addShareMeta_(newHtml, newTitle, newVideoId), "text/html", newVideoId + ".html"));
 
   videos.forEach(function(v) {
     if (v.videoId === newVideoId) return;
     // 1. Try ScriptProperties (videos processed after the fix)
     const storedHtml = PropertiesService.getScriptProperties().getProperty("vid_html_" + v.videoId);
     if (storedHtml) {
-      blobs.push(Utilities.newBlob(storedHtml, "text/html", v.videoId + ".html"));
+      blobs.push(Utilities.newBlob(addShareMeta_(storedHtml, v.title, v.videoId), "text/html", v.videoId + ".html"));
       return;
     }
     // 2. Search Drive by videoId anywhere in filename — no title dependency
@@ -187,7 +228,7 @@ function deployAllToNetlify(sheet, data, newHtml, newVideoId, newTitle, newTopic
       const files = DriveApp.searchFiles(query);
       if (files.hasNext()) {
         const html = files.next().getBlob().getDataAsString();
-        blobs.push(Utilities.newBlob(html, "text/html", v.videoId + ".html"));
+        blobs.push(Utilities.newBlob(addShareMeta_(html, v.title, v.videoId), "text/html", v.videoId + ".html"));
         // Cache in ScriptProperties so next deploy doesn't need Drive
         PropertiesService.getScriptProperties().setProperty("vid_html_" + v.videoId, html);
         Logger.log("Found in Drive: " + v.videoId);
@@ -275,7 +316,7 @@ function buildIndexPage(videos) {
   });
 
   const totalVideos = videos.length;
-  const totalTopics = CONFIG.TOPICS.length;
+  const totalTopics = Object.keys(byTopic).filter(function(t) { return byTopic[t].length > 0; }).length;
 
   var svgIcons = {
     "AI Tools":    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#grd-lib)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M3 9h2M3 15h2M19 9h2M19 15h2M9 3v2M15 3v2M9 19v2M15 19v2"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>',
@@ -292,28 +333,27 @@ function buildIndexPage(videos) {
     var cards = "";
     vids.forEach(function(v) {
       cards += '<a href="' + v.videoId + '.html" class="video-card anim-ready" data-vid="' + v.videoId + '">' +
-        '<button class="delete-btn" title="מחיקה" aria-label="מחיקת סרטון">✕</button>' +
-        '<div class="card-topic">' + topic + '</div>' +
-        '<div class="card-title">' + (v.title || v.videoId) + '</div>' +
+        '<div class="card-topic">' + topicLabel_(topic) + '</div>' +
+        '<div class="card-title">' + escHtml_(v.title || v.videoId) + '</div>' +
         '<div class="card-date">' + (v.date || "") + '</div>' +
         '</a>';
     });
     sections += '<div class="topic-section anim-ready">' +
       '<div class="topic-header">' +
       '<span class="topic-icon" aria-hidden="true">' + iconSvg + '</span>' +
-      '<span class="topic-name">' + topic + '</span>' +
+      '<span class="topic-name">' + topicLabel_(topic) + '</span>' +
       '<span class="topic-count" aria-label="' + vids.length + ' סיכומים">' + vids.length + '</span>' +
       '<div class="car-nav">' +
       '<button class="car-btn car-prev" aria-label="הסיכומים הקודמים">›</button>' +
       '<button class="car-btn car-next" aria-label="הסיכומים הבאים">‹</button>' +
       '</div>' +
       '</div>' +
-      '<div class="video-track" role="group" aria-label="סיכומים בנושא ' + topic + '">' + cards + '</div>' +
+      '<div class="video-track" role="group" aria-label="סיכומים בנושא ' + topicLabel_(topic) + '">' + cards + '</div>' +
       '</div>';
   });
 
   if (!sections) {
-    sections = '<div class="empty">No videos yet - add a URL to the Google Sheet</div>';
+    sections = '<div class="empty">עדיין אין סיכומים</div>';
   }
 
   return '<!DOCTYPE html>' +
@@ -322,11 +362,22 @@ function buildIndexPage(videos) {
 '<meta charset="UTF-8">' +
 '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
 '<title>ספריית סיכומים | אילת שחק שול</title>' +
+'<meta name="description" content="סיכומים מדויקים של סרטוני YouTube בעברית, רק מה שנאמר, עם צעדי פעולה. נבנה אוטומטית עם Apps Script ו-Claude.">' +
+'<link rel="canonical" href="' + siteUrl_() + '/">' +
+'<meta property="og:type" content="website"><meta property="og:locale" content="he_IL">' +
+'<meta property="og:site_name" content="אילת שחק שול">' +
+'<meta property="og:title" content="ספריית הסיכומים | אילת שחק שול">' +
+'<meta property="og:description" content="סיכומים מדויקים של סרטוני YouTube בעברית, רק מה שנאמר, עם צעדי פעולה.">' +
+'<meta property="og:url" content="' + siteUrl_() + '/">' +
+'<meta property="og:image" content="' + siteUrl_() + '/og-library.png">' +
+'<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">' +
+'<meta name="twitter:card" content="summary_large_image">' +
+'<script>document.documentElement.className+=" js";</script>' +
 '<link rel="preconnect" href="https://fonts.googleapis.com">' +
 '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">' +
 '<style>' +
 '@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}' +
-'.anim-ready{opacity:0}.anim-fadeup{animation:fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both}' +
+'.js .anim-ready{opacity:0}.anim-fadeup{animation:fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both}' +
 '.topic-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}' +
 '*{box-sizing:border-box;margin:0;padding:0}' +
 'body{font-family:Heebo,Arial,sans-serif;direction:rtl;' +
@@ -438,7 +489,6 @@ function buildIndexPage(videos) {
 '.video-track .video-card{flex-basis:78%}' + /* card peeks — invites swipe */
 '}' +
 '</style></head><body>' +
-'<div class="admin-banner">⚙️ מצב ניהול — כפתורי מחיקה פעילים</div>' +
 '<svg width="0" height="0" style="position:absolute;overflow:hidden;"><defs>' +
 '<linearGradient id="grd-lib" x1="0%" y1="0%" x2="100%" y2="100%">' +
 '<stop offset="0%" stop-color="#0d9488"/><stop offset="100%" stop-color="#ec4899"/>' +
@@ -447,11 +497,11 @@ function buildIndexPage(videos) {
 '<div class="hero-inner">' +
 '<h1>ספריית <span>הסיכומים</span> שלי</h1>' +
 '<p class="sub">סיכומים מדויקים - רק מה שנאמר, עם צעדי פעולה</p>' +
+'<p class="sub">מערכת שבניתי: מוסיפים קישור לסרטון, והסיכום נכתב ומתפרסם כאן אוטומטית. <a href="/youtube-pipeline-casestudy.html" style="color:#0d9488;font-weight:600">איך זה עובד</a></p>' +
 '</div>' +
 '<div class="stats">' +
-'<div class="stat"><span class="stat-num" id="cv">0</span><span class="stat-label">סרטונים</span></div>' +
-'<div class="stat"><span class="stat-num teal" id="ct">0</span><span class="stat-label">נושאים</span></div>' +
-'<button class="lock-btn" id="lock-btn" onclick="adminLogin()" title="כניסת מנהלת" aria-label="כניסת מנהלת">🔒</button>' +
+'<div class="stat"><span class="stat-num" id="cv">' + totalVideos + '</span><span class="stat-label">סרטונים</span></div>' +
+'<div class="stat"><span class="stat-num teal" id="ct">' + totalTopics + '</span><span class="stat-label">נושאים</span></div>' +
 '</div></div>' +
 '<div class="search-wrap"><div class="search-inner">' +
 '<span class="search-icon" aria-hidden="true">🔍</span>' +
@@ -478,44 +528,34 @@ sections +
 'var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add("anim-fadeup");obs.unobserve(x.target);}});},{threshold:0.1,rootMargin:"0px 0px -30px 0px"});' +
 'document.querySelectorAll(".anim-ready").forEach(function(el){obs.observe(el);});' +
 'function countUp(el,target,dur){var s=performance.now();(function step(now){var p=Math.min((now-s)/dur,1);el.textContent=Math.round((1-Math.pow(1-p,3))*target);if(p<1)requestAnimationFrame(step);})(performance.now());}' +
-'setTimeout(function(){countUp(document.getElementById("cv"),' + totalVideos + ',1200);setTimeout(function(){countUp(document.getElementById("ct"),' + totalTopics + ',800);},200);},400);' +
+'countUp(document.getElementById("cv"),' + totalVideos + ',1200);setTimeout(function(){countUp(document.getElementById("ct"),' + totalTopics + ',800);},200);' +
 'var WEBAPP_URL="' + CONFIG.WEBAPP_URL + '";' +
 'var ADMIN_HASH="' + sha256Hex_(CONFIG.ADMIN_CODE) + '";' + /* SHA-256, one-way — the code itself is NOT recoverable from the page */
-'var adminCode=null;' + /* set after successful login; sent with delete requests for server-side auth */
-/* Admin login via lock button */
-'function adminLogin(){' +
-'if(document.body.classList.contains("admin-mode")){' +
-'document.body.classList.remove("admin-mode");' +
-'adminCode=null;' +
-'document.getElementById("lock-btn").textContent="🔒";return;}' +
-'var code=prompt("קוד גישה:");' +
-'if(!code)return;' +
-'sha256Hex(code).then(function(h){' +
-'if(h===ADMIN_HASH){' +
-'document.body.classList.add("admin-mode");' +
-'adminCode=code;' +
-'document.getElementById("lock-btn").textContent="🔓";' +
-'attachDeleteHandlers();' +
-'}else{alert("קוד שגוי");}});}' +
+'var adminCode=null;' +
 'function sha256Hex(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return("0"+b.toString(16)).slice(-2)}).join("")});}' +
-/* Attach delete buttons */
-'function attachDeleteHandlers(){' +
-'document.querySelectorAll(".delete-btn").forEach(function(btn){' +
-'if(btn.dataset.bound)return;btn.dataset.bound="1";' +
-'btn.addEventListener("click",function(e){' +
-'e.preventDefault();e.stopPropagation();' +
-'var card=btn.closest(".video-card");' +
-'var vid=card.getAttribute("data-vid");' +
-'var titleText=card.querySelector(".card-title").textContent;' +
+/* Admin: no admin UI in the public page. Open <site>/#admin to log in; the banner and delete buttons are created only after a correct code. */
+'function adminLogin(){' +
+'var code=prompt("קוד גישה:");if(!code)return;' +
+'sha256Hex(code).then(function(h){' +
+'if(h!==ADMIN_HASH){alert("קוד שגוי");return;}' +
+'adminCode=code;document.body.classList.add("admin-mode");' +
+'var bn=document.createElement("div");bn.className="admin-banner";bn.textContent="מצב ניהול: כפתורי מחיקה פעילים";document.body.insertBefore(bn,document.body.firstChild);' +
+'document.querySelectorAll(".video-card").forEach(function(card){' +
+'var btn=document.createElement("button");btn.className="delete-btn";btn.type="button";btn.title="מחיקה";btn.setAttribute("aria-label","מחיקת סרטון");btn.textContent="✕";' +
+'btn.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();deleteCard(card,btn);});' +
+'card.insertBefore(btn,card.firstChild);});});}' +
+'function deleteCard(card,btn){' +
+'var vid=card.getAttribute("data-vid");var titleText=card.querySelector(".card-title").textContent;' +
 'if(!confirm("למחוק: "+titleText+"?"))return;' +
-'btn.textContent="...";btn.style.pointerEvents="none";' +
-'if(!WEBAPP_URL){alert("WEBAPP_URL ריק — הוסיפי אותו ב-Script Properties");return;}' +
-'if(!adminCode){alert("חסר קוד אדמין");return;}' +
-'fetch(WEBAPP_URL+"?action=delete&vid="+encodeURIComponent(vid)+"&code="+encodeURIComponent(adminCode),{mode:"no-cors"})' +
-'.then(function(){card.style.opacity="0.35";card.style.pointerEvents="none";' +
-'card.querySelector(".card-title").textContent="נמחק — מתעדכן...";})' +
-'.catch(function(){alert("שגיאה — בדקי את WEBAPP_URL");});' +
-'});});}' +
+'if(!WEBAPP_URL){alert("WEBAPP_URL ריק. צריך להוסיף אותו ב-Script Properties");return;}' +
+'btn.textContent="...";btn.disabled=true;' +
+/* POST keeps the admin code out of URLs and server logs */
+'fetch(WEBAPP_URL,{method:"POST",body:new URLSearchParams({action:"delete",vid:vid,code:adminCode})})' +
+'.then(function(r){return r.json();})' +
+'.then(function(d){if(d.status!=="ok")throw new Error(d.message||"error");' +
+'card.style.opacity="0.35";card.style.pointerEvents="none";card.querySelector(".card-title").textContent="נמחק, הדף מתעדכן...";})' +
+'.catch(function(err){btn.textContent="✕";btn.disabled=false;alert("המחיקה נכשלה: "+err.message);});}' +
+'if(location.hash==="#admin"){history.replaceState(null,"",location.pathname);setTimeout(adminLogin,300);}' +
 /* Subscribe */
 'function doSubscribe(){' +
 'var email=document.getElementById("sub-email").value.trim();' +
@@ -523,10 +563,11 @@ sections +
 'if(!email||!email.includes("@")){msg.className="sub-msg err";msg.textContent="מייל לא תקין";return;}' +
 'if(!WEBAPP_URL){msg.className="sub-msg err";msg.textContent="שירות ההרשמה לא מוגדר עדיין";return;}' +
 'msg.className="sub-msg";msg.textContent="שולח...";' +
-'var img=new Image();' +
-'img.onload=img.onerror=function(){msg.textContent="✓ נרשמת! בדקי את תיבת הדואר לאישור";' +
-'document.getElementById("sub-email").value="";};' +
-'img.src=WEBAPP_URL+"?action=subscribe&email="+encodeURIComponent(email)+"&t="+Date.now();} ' +
+'fetch(WEBAPP_URL+"?action=subscribe&email="+encodeURIComponent(email))' +
+'.then(function(r){return r.json();})' +
+'.then(function(d){if(d.status!=="ok")throw new Error();' +
+'msg.className="sub-msg";msg.textContent="נרשמת. בדקי את תיבת הדואר לאישור";document.getElementById("sub-email").value="";})' +
+'.catch(function(){msg.className="sub-msg err";msg.textContent="ההרשמה לא עברה. אפשר לנסות שוב מאוחר יותר";});} ' +
 'document.getElementById("srch").addEventListener("input",function(){' +
 'var q=this.value.trim().toLowerCase();var vis=0;' +
 'document.querySelectorAll(".topic-section").forEach(function(sec){' +
@@ -807,16 +848,7 @@ function doGet(e) {
     var token  = (e.parameter.token || "").toString().trim();
     var code   = (e.parameter.code || "").toString();
 
-    if (action === "delete" && vid) {
-      // Server-side auth: ADMIN_CODE must be set AND match the code from the request.
-      // Without this, anyone who knows the WEBAPP_URL could delete any video.
-      if (!CONFIG.ADMIN_CODE || code !== CONFIG.ADMIN_CODE) {
-        output.setContent(JSON.stringify({status:"error",message:"Unauthorized"}));
-        return output;
-      }
-      deleteVideoFromLibrary(vid);
-      output.setContent(JSON.stringify({status:"ok",deleted:vid}));
-    } else if (action === "subscribe" && email) {
+    if (action === "subscribe" && email) {
       var result = addSubscriber(email);
       output.setContent(JSON.stringify({status:"ok",message:result}));
     } else if (action === "unsubscribe" && token) {
@@ -850,6 +882,35 @@ function doGet(e) {
       output.setContent(JSON.stringify({status:"error",message:"Unknown action"}));
     }
   } catch(err) {
+    output.setContent(JSON.stringify({status:"error",message:err.message}));
+  }
+  return output;
+}
+
+// Deletion arrives by POST only, so the admin code never appears in a URL.
+function doPost(e) {
+  var output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+  try {
+    var p = (e && e.parameter) || {};
+    var vid  = (p.vid || "").toString().trim();
+    var code = (p.code || "").toString();
+    if (p.action !== "delete" || !vid) {
+      output.setContent(JSON.stringify({status:"error",message:"Unknown action"}));
+      return output;
+    }
+    // Server-side auth: ADMIN_CODE must be set AND match the code from the request.
+    if (!CONFIG.ADMIN_CODE || code !== CONFIG.ADMIN_CODE) {
+      output.setContent(JSON.stringify({status:"error",message:"Unauthorized"}));
+      return output;
+    }
+    if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) {
+      output.setContent(JSON.stringify({status:"error",message:"Bad video id"}));
+      return output;
+    }
+    deleteVideoFromLibrary(vid);
+    output.setContent(JSON.stringify({status:"ok",deleted:vid}));
+  } catch (err) {
     output.setContent(JSON.stringify({status:"error",message:err.message}));
   }
   return output;
@@ -1012,7 +1073,7 @@ function redeployIndex() {
 
   videos.forEach(function(v) {
     const html = props.getProperty("vid_html_" + v.videoId);
-    if (html) blobs.push(Utilities.newBlob(html, "text/html", v.videoId + ".html"));
+    if (html) blobs.push(Utilities.newBlob(addShareMeta_(html, v.title, v.videoId), "text/html", v.videoId + ".html"));
   });
 
   addStaticPageBlobs_(blobs);
