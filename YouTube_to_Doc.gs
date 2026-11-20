@@ -165,6 +165,29 @@ function processPendingVideos() {
 // A Netlify ZIP deploy replaces the WHOLE site, so any deploy path that
 // skips these files silently deletes them from production. Every deploy
 // path must call this.
+// Copies the HTML pages in the repo's static-pages/ folder (main branch) into
+// the Drive static folder, then redeploys. GitHub is the source of truth for
+// these pages; the Drive folder is what the deploy reads.
+const STATIC_PAGES_REPO_ = "https://raw.githubusercontent.com/ayulaa1-supreme/youtube-pipeline/main/static-pages/";
+const STATIC_PAGES_SYNCED_ = ["youtube-pipeline-casestudy.html", "about.html"];
+
+function syncStaticPagesFromGitHub() {
+  assertConfig_();
+  if (!CONFIG.STATIC_PAGES_FOLDER_ID) throw new Error("STATIC_PAGES_FOLDER_ID is not set");
+  const folder = DriveApp.getFolderById(CONFIG.STATIC_PAGES_FOLDER_ID);
+  STATIC_PAGES_SYNCED_.forEach(function(name) {
+    const res = UrlFetchApp.fetch(STATIC_PAGES_REPO_ + name + "?t=" + Date.now(), { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) { Logger.log("Skipped " + name + ": HTTP " + res.getResponseCode()); return; }
+    const html = res.getContentText("UTF-8");
+    if (!/^<!DOCTYPE html>/i.test(html.trim())) { Logger.log("Skipped " + name + ": not an HTML page"); return; }
+    const files = folder.getFilesByName(name);
+    if (files.hasNext()) files.next().setContent(html);
+    else folder.createFile(Utilities.newBlob(html, "text/html", name));
+    Logger.log("Synced " + name + " (" + html.length + " chars)");
+  });
+  redeployIndex();
+}
+
 function addStaticPageBlobs_(blobs) {
   if (!CONFIG.STATIC_PAGES_FOLDER_ID) return;
   try {
