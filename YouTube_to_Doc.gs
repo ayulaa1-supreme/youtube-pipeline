@@ -618,92 +618,33 @@ function generateHTMLWithClaude(transcript, title, sourceUrl) {
 }
 
 // ===========================================
-// FACT CHECK
+// FACT CHECK (second agent)
 // ===========================================
-// The IRON RULE in the prompt is an instruction, not a guarantee. Every summary
-// is checked against the transcript by a second call before it is published:
-// each statement must be supported by the transcript. Unsupported statements are
-// sent back for one repair (remove, or correct to what the transcript says);
-// if anything is still unsupported, the summary is not published.
-
-// Summary as plain text, one statement block per line.
-function summaryPlainText_(fragment) {
-  return String(fragment || "")
-    .replace(/<\/(p|li|h1|h2|h3|dd|dt|blockquote|figcaption)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
-    .split("\n").map(function(l) { return l.replace(/\s+/g, " ").trim(); })
-    .filter(function(l) { return l; }).join("\n");
-}
-
-// Returns a list of {text, why} for statements the transcript does not support.
-function factCheckSummary_(fragment, transcript) {
+// Two agents: the writer (generateHTMLWithClaude) and one checker. The IRON RULE
+// in the writer's prompt is an instruction, not a guarantee, so before a summary
+// is published the checker compares it with the transcript, fixes or removes
+// every statement the transcript does not support, and returns the clean summary
+// with a list of what it changed. It sees only the summary and the transcript,
+// not the writer's instructions.
+function factCheckAndFix_(fragment, transcript) {
   const prompt =
-    "You are a strict fact checker. Below is a TRANSCRIPT of a video and a Hebrew SUMMARY of it.\n" +
-    "Check every statement in the SUMMARY against the TRANSCRIPT.\n" +
-    "A statement is UNSUPPORTED if any part of it is not said in the transcript: a fact, number, price, " +
-    "name, tool, step, recommendation, example, cause or claim that the speaker did not state. " +
-    "Paraphrase and translation are fine. Headings, the section label 'מה עושים עם זה', the line listing tools " +
-    "(if those tools are named in the transcript) and the source line are fine.\n" +
-    "An action step is supported if it is based on something the speaker recommended, suggested, demonstrated or gave as a tip.\n" +
-    "Classify each problem:\n" +
-    "- invented: a fact, number, price, name, tool, feature or claim that the transcript does not contain at all.\n" +
-    "- distorted: the transcript says something materially different (wrong number, wrong tool, reversed meaning, overstated certainty).\n" +
-    "- nuance: wording, emphasis, framing, grouping, shortening or a slightly different label for the same thing.\n" +
-    "Report ONLY invented and distorted. Never report nuance.\n" +
-    "Do not judge style, length or quality. Only support.\n\n" +
-    "Decide silently. List ONLY statements you are sure are unsupported; never list a statement you judge supported, " +
-    "and never list text that is not in the SUMMARY.\n" +
-    "Output exactly one JSON object and nothing else, no commentary before or after it:\n" +
-    "{\"unsupported\":[{\"text\":\"exact Hebrew text from the summary\",\"verdict\":\"invented or distorted\",\"why\":\"short reason in English\"}]}\n" +
-    "If everything is supported output {\"unsupported\":[]}.\n\n" +
-    "SUMMARY:\n" + summaryPlainText_(fragment) + "\n\n" +
+    "You are a strict fact checker. Below is a TRANSCRIPT of a video and a Hebrew SUMMARY of it (an HTML fragment).\n" +
+    "Check every statement in the SUMMARY against the TRANSCRIPT and fix only real problems:\n" +
+    "- invented: a fact, number, price, name, tool, feature or claim that the transcript does not contain at all -> remove it.\n" +
+    "- distorted: the transcript says something materially different (wrong number, wrong tool, reversed meaning, overstated certainty) -> correct it to what the transcript says.\n" +
+    "Do NOT change wording, emphasis, framing, grouping or labels that mean the same thing. An action step is fine if it is based on something " +
+    "the speaker recommended, suggested, demonstrated or gave as a tip. Never add new content.\n" +
+    "If removing a statement leaves an empty list item or paragraph, remove that element. Keep the same HTML structure, classes and attributes.\n\n" +
+    "Output exactly two blocks and nothing else:\n" +
+    "1. The full corrected <article>...</article> fragment (unchanged if nothing was wrong).\n" +
+    "2. <changes>one line per change: 'removed: <text> | <reason in English>' or 'fixed: <old> -> <new> | <reason>'. Empty if nothing changed.</changes>\n\n" +
+    "SUMMARY:\n" + fragment + "\n\n" +
     "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
-  const data = firstJsonObject_(callClaude_(prompt, 2000));
-  if (!data || !Array.isArray(data.unsupported)) throw new Error("Fact check returned no usable JSON");
-  const plain = summaryPlainText_(fragment);
-  return data.unsupported.filter(function(u) {
-    if (!u || !u.text) return false;
-    const v = String(u.verdict || "").toLowerCase();
-    if (v && v.indexOf("invented") === -1 && v.indexOf("distorted") === -1 && v !== "unsupported") return false;
-    if (/^\s*supported\b/i.test(u.why || "")) return false;           // checker contradicted itself
-    return plain.indexOf(String(u.text).trim().slice(0, 12)) !== -1;  // must quote the summary
-  });
-}
-
-// Parses the first complete JSON object in a text, ignoring anything after it.
-function firstJsonObject_(text) {
-  const t = String(text || "");
-  const start = t.indexOf("{");
-  if (start === -1) return null;
-  let depth = 0, inStr = false, esc = false;
-  for (let i = start; i < t.length; i++) {
-    const c = t[i];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (c === "\\") esc = true;
-      else if (c === '"') inStr = false;
-    } else if (c === '"') inStr = true;
-    else if (c === "{") depth++;
-    else if (c === "}" && --depth === 0) {
-      try { return JSON.parse(t.slice(start, i + 1)); } catch (e) { return null; }
-    }
-  }
-  return null;
-}
-
-function repairSummary_(fragment, unsupported, transcript) {
-  const prompt =
-    "Below is a Hebrew summary (HTML fragment) of a video, its TRANSCRIPT, and a list of statements in the summary " +
-    "that the transcript does NOT support.\n" +
-    "Return the same fragment with each listed statement either removed, or corrected so it says only what the transcript says. " +
-    "Change nothing else: same HTML structure, same classes, same attributes. If removing a statement leaves an empty " +
-    "list item or paragraph, remove that element. Keep at least 3 items in the s-actions list only if the transcript supports them.\n" +
-    "Return ONLY the <article> fragment.\n\n" +
-    "UNSUPPORTED:\n" + unsupported.map(function(u) { return "- " + u.text + " (" + (u.why || "") + ")"; }).join("\n") + "\n\n" +
-    "FRAGMENT:\n" + fragment + "\n\n" +
-    "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
-  return extractArticle_(callClaude_(prompt, 6000));
+  const text = callClaude_(prompt, 6000);
+  const fixed = extractArticle_(text.replace(/<changes>[\s\S]*?<\/changes>/i, ""));
+  const ch = text.match(/<changes>([\s\S]*?)<\/changes>/i);
+  const changes = ch ? ch[1].split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l; }) : [];
+  return { fragment: fixed, changes: changes };
 }
 
 // ===========================================
@@ -765,19 +706,15 @@ function generateValidatedHtml_(transcript, title, sourceUrl, topic) {
       Logger.log("Quality gate attempt " + attempt + " failed: " + problems.join("; "));
       continue;
     }
-    // Fact check, one repair, check again.
-    let unsupported = factCheckSummary_(fragment, transcript);
-    if (unsupported.length) {
-      Logger.log("Fact check: " + unsupported.length + " unsupported, repairing: " + JSON.stringify(unsupported));
-      fragment = repairSummary_(fragment, unsupported, transcript);
-      problems = validateSummaryHtml_(fragment, transcript);
-      unsupported = problems.length ? [] : factCheckSummary_(fragment, transcript);
+    // Second agent: check against the transcript and fix.
+    const checked = factCheckAndFix_(fragment, transcript);
+    Logger.log("Fact check: " + (checked.changes.length ? checked.changes.length + " change(s): " + checked.changes.join(" || ") : "no changes"));
+    problems = validateSummaryHtml_(checked.fragment, transcript);
+    // The checker may only remove or correct, never add.
+    if (!problems.length && countWords_(checked.fragment) > countWords_(fragment) + 20) problems.push("checker added content");
+    if (!problems.length) {
+      return buildSummaryPage_(checkFigure_(checked.fragment, transcript), { topic: topic, title: title, sourceUrl: sourceUrl });
     }
-    if (!problems.length && !unsupported.length) {
-      Logger.log("Fact check passed (attempt " + attempt + ")");
-      return buildSummaryPage_(checkFigure_(fragment, transcript), { topic: topic, title: title, sourceUrl: sourceUrl });
-    }
-    unsupported.forEach(function(u) { problems.push("unsupported by transcript: " + u.text + " (" + (u.why || "") + ")"); });
     Logger.log("Attempt " + attempt + " failed: " + problems.join("; "));
   }
   sendQualityAlert_(title, sourceUrl, problems);
