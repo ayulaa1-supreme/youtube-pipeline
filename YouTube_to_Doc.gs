@@ -647,15 +647,43 @@ function factCheckSummary_(fragment, transcript) {
     "(if those tools are named in the transcript) and the source line are fine.\n" +
     "An action step is supported only if the speaker suggested that action or it directly restates something the speaker said to do.\n" +
     "Do not judge style, length or quality. Only support.\n\n" +
-    "Return ONLY JSON, no other text: {\"unsupported\":[{\"text\":\"exact Hebrew text from the summary\",\"why\":\"short reason in English\"}]}\n" +
-    "If everything is supported return {\"unsupported\":[]}.\n\n" +
+    "Decide silently. List ONLY statements you are sure are unsupported; never list a statement you judge supported, " +
+    "and never list text that is not in the SUMMARY.\n" +
+    "Output exactly one JSON object and nothing else, no commentary before or after it:\n" +
+    "{\"unsupported\":[{\"text\":\"exact Hebrew text from the summary\",\"verdict\":\"unsupported\",\"why\":\"short reason in English\"}]}\n" +
+    "If everything is supported output {\"unsupported\":[]}.\n\n" +
     "SUMMARY:\n" + summaryPlainText_(fragment) + "\n\n" +
     "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
-  const text = callClaude_(prompt, 2000);
-  const json = text.match(/\{[\s\S]*\}/);
-  if (!json) throw new Error("Fact check returned no JSON");
-  const data = JSON.parse(json[0]);
-  return Array.isArray(data.unsupported) ? data.unsupported.filter(function(u) { return u && u.text; }) : [];
+  const data = firstJsonObject_(callClaude_(prompt, 2000));
+  if (!data || !Array.isArray(data.unsupported)) throw new Error("Fact check returned no usable JSON");
+  const plain = summaryPlainText_(fragment);
+  return data.unsupported.filter(function(u) {
+    if (!u || !u.text) return false;
+    if (u.verdict && String(u.verdict).toLowerCase() !== "unsupported") return false;
+    if (/^\s*supported\b/i.test(u.why || "")) return false;           // checker contradicted itself
+    return plain.indexOf(String(u.text).trim().slice(0, 12)) !== -1;  // must quote the summary
+  });
+}
+
+// Parses the first complete JSON object in a text, ignoring anything after it.
+function firstJsonObject_(text) {
+  const t = String(text || "");
+  const start = t.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < t.length; i++) {
+    const c = t[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') inStr = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) {
+      try { return JSON.parse(t.slice(start, i + 1)); } catch (e) { return null; }
+    }
+  }
+  return null;
 }
 
 function repairSummary_(fragment, unsupported, transcript) {
