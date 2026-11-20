@@ -1283,8 +1283,10 @@ function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
 // and redeploys the site once at the end.
 //
 // Run startRegeneration() once from the editor. Progress is in the log;
-// regenerationStatus() shows what is left. A video that fails keeps its old
-// page and is listed in a summary email to the owner at the end.
+// regenerationStatus() shows what is left; stopRegeneration() cancels.
+// The site is redeployed after every batch. A video that fails keeps its old
+// page and is listed in a summary email to the owner at the end. The previous
+// page of each video is kept in Drive as legacy-backup_<videoId>.html.txt.
 const REGEN_QUEUE_KEY_ = "regen_queue";
 const REGEN_FAILED_KEY_ = "regen_failed";
 const REGEN_BATCH_ = 2;
@@ -1314,6 +1316,25 @@ function regenerationStatus() {
   Logger.log("Failed: " + (props.getProperty(REGEN_FAILED_KEY_) || "[]"));
 }
 
+// Cancel a running regeneration. Pages already rewritten stay rewritten.
+function stopRegeneration() {
+  stopRegenerationTrigger_();
+  PropertiesService.getScriptProperties().deleteProperty(REGEN_QUEUE_KEY_);
+  Logger.log("Regeneration stopped.");
+}
+
+// Keeps the previous page before it is overwritten. Saved as .txt so the
+// static-pages deploy (html/images only) never publishes it.
+function backupLegacyHtml_(vid, html) {
+  if (!html) return;
+  try {
+    const folder = CONFIG.DRIVE_FOLDER_ID ? DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID) : DriveApp.getRootFolder();
+    const name = "legacy-backup_" + vid + ".html.txt";
+    if (folder.getFilesByName(name).hasNext()) return; // keep the first (original) backup
+    folder.createFile(Utilities.newBlob(html, "text/plain", name));
+  } catch (e) { Logger.log("Legacy backup failed for " + vid + ": " + e.message); }
+}
+
 function stopRegenerationTrigger_() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === "regenerateBatch") ScriptApp.deleteTrigger(t);
@@ -1340,6 +1361,7 @@ function regenerateBatch() {
         const transcript = getYouTubeTranscript(r.url);
         if (!transcript) throw new Error("No transcript found");
         const html = generateValidatedHtml_(transcript, r.title, r.url, r.topic);
+        backupLegacyHtml_(vid, props.getProperty("vid_html_" + vid));
         props.setProperty("vid_html_" + vid, html);
         props.setProperty("vid_title_he_" + vid, extractHebrewTitle(html) || r.title);
         try { saveToDrive(html, extractHebrewTitle(html) || r.title, vid); } catch (e) { Logger.log("Drive backup failed: " + e.message); }
@@ -1353,6 +1375,7 @@ function regenerateBatch() {
       props.setProperty(REGEN_FAILED_KEY_, JSON.stringify(failed));
     }
     if (!queue.length) finishRegeneration_(failed);
+    else redeployIndex(); // publish this batch now, so results can be checked as they come
   } finally {
     lock.releaseLock();
   }
