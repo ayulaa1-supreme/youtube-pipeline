@@ -645,12 +645,17 @@ function factCheckSummary_(fragment, transcript) {
     "name, tool, step, recommendation, example, cause or claim that the speaker did not state. " +
     "Paraphrase and translation are fine. Headings, the section label 'מה עושים עם זה', the line listing tools " +
     "(if those tools are named in the transcript) and the source line are fine.\n" +
-    "An action step is supported only if the speaker suggested that action or it directly restates something the speaker said to do.\n" +
+    "An action step is supported if it is based on something the speaker recommended, suggested, demonstrated or gave as a tip.\n" +
+    "Classify each problem:\n" +
+    "- invented: a fact, number, price, name, tool, feature or claim that the transcript does not contain at all.\n" +
+    "- distorted: the transcript says something materially different (wrong number, wrong tool, reversed meaning, overstated certainty).\n" +
+    "- nuance: wording, emphasis, framing, grouping, shortening or a slightly different label for the same thing.\n" +
+    "Report ONLY invented and distorted. Never report nuance.\n" +
     "Do not judge style, length or quality. Only support.\n\n" +
     "Decide silently. List ONLY statements you are sure are unsupported; never list a statement you judge supported, " +
     "and never list text that is not in the SUMMARY.\n" +
     "Output exactly one JSON object and nothing else, no commentary before or after it:\n" +
-    "{\"unsupported\":[{\"text\":\"exact Hebrew text from the summary\",\"verdict\":\"unsupported\",\"why\":\"short reason in English\"}]}\n" +
+    "{\"unsupported\":[{\"text\":\"exact Hebrew text from the summary\",\"verdict\":\"invented or distorted\",\"why\":\"short reason in English\"}]}\n" +
     "If everything is supported output {\"unsupported\":[]}.\n\n" +
     "SUMMARY:\n" + summaryPlainText_(fragment) + "\n\n" +
     "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
@@ -659,7 +664,8 @@ function factCheckSummary_(fragment, transcript) {
   const plain = summaryPlainText_(fragment);
   return data.unsupported.filter(function(u) {
     if (!u || !u.text) return false;
-    if (u.verdict && String(u.verdict).toLowerCase() !== "unsupported") return false;
+    const v = String(u.verdict || "").toLowerCase();
+    if (v && v.indexOf("invented") === -1 && v.indexOf("distorted") === -1 && v !== "unsupported") return false;
     if (/^\s*supported\b/i.test(u.why || "")) return false;           // checker contradicted itself
     return plain.indexOf(String(u.text).trim().slice(0, 12)) !== -1;  // must quote the summary
   });
