@@ -684,6 +684,10 @@ function sendQualityAlert_(title, sourceUrl, problems) {
   } catch (e) { Logger.log("Quality alert email failed: " + e.message); }
 }
 
+// The whole transcript goes to Claude. The old 12,000-character cut kept only
+// the first ~12 minutes of a video, so the end of longer videos was never summarized.
+const MAX_TRANSCRIPT_CHARS_ = 150000;
+
 function buildPrompt(transcript, title, sourceUrl) {
   return "You write a SHORT Hebrew summary of a YouTube video, as an HTML fragment.\n\n" +
     "IRON RULE: ONLY content from the transcript. Zero inventions. Zero additions.\n" +
@@ -731,7 +735,7 @@ function buildPrompt(transcript, title, sourceUrl) {
     "s-tools: only tools or products named in the video. If none, omit that <p>.\n\n" +
     "Mixed Hebrew/English: wrap every English word or phrase in <bdi>, e.g. <h1 dir=\"rtl\">שליטה בסוכני AI של <bdi>Claude</bdi></h1>.\n" +
     "Address the reader in plural (אתם / בחרו / חברו).\n\n" +
-    "TRANSCRIPT:\n" + transcript.substring(0, 12000);
+    "TRANSCRIPT:\n" + transcript.substring(0, MAX_TRANSCRIPT_CHARS_);
 }
 
 // ===========================================
