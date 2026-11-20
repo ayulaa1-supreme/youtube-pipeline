@@ -675,6 +675,8 @@ function validateSummaryHtml_(fragment, transcript) {
   ["s-tldr", "s-part", "s-actions"].forEach(function(cls) {
     if (fragment.indexOf(cls) === -1) problems.push("missing section: ." + cls);
   });
+  const bad = tagNestingError_(fragment);
+  if (bad) problems.push("broken HTML structure: " + bad);
   const h1 = extractHebrewTitle(fragment);
   if (!h1 || !/[א-ת]/.test(h1)) problems.push("h1 missing or not Hebrew");
   const words = countWords_(fragment);
@@ -683,6 +685,25 @@ function validateSummaryHtml_(fragment, transcript) {
   const nActions = (actions.match(/<li\b/gi) || []).length;
   if (nActions > 5) problems.push("too many action steps: " + nActions + " (max 5)");
   return problems;
+}
+
+// Checks that block tags open and close in the right order. A swapped pair
+// (e.g. </section></div>) makes the browser end the article early and the rest
+// of the page falls outside the layout. Returns "" when the nesting is valid.
+function tagNestingError_(html) {
+  const tracked = /^(article|header|section|div|ol|ul|li|dl|dt|dd|p|h1|h2|h3|figure|blockquote|figcaption)$/;
+  const stack = [];
+  const re = /<(\/?)([a-z0-9]+)\b[^>]*?(\/?)>/gi;
+  let m;
+  while ((m = re.exec(String(html || "")))) {
+    const tag = m[2].toLowerCase();
+    if (!tracked.test(tag) || m[3]) continue;
+    if (!m[1]) { stack.push(tag); continue; }
+    if (!stack.length) return "</" + tag + "> without an opening tag";
+    const open = stack.pop();
+    if (open !== tag) return "<" + open + "> closed by </" + tag + ">";
+  }
+  return stack.length ? "<" + stack[stack.length - 1] + "> never closed" : "";
 }
 
 // The key figure on the index card must come from the video, not from Claude.
@@ -1362,6 +1383,25 @@ function startRegeneration() {
   stopRegenerationTrigger_();
   ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
   Logger.log("Regeneration queued: " + queue.length + " summaries. First batch runs now.");
+  regenerateBatch();
+}
+
+// Finds published summaries whose HTML structure is broken and rewrites them.
+function regenerateMalformed() {
+  assertConfig_();
+  const props = PropertiesService.getScriptProperties();
+  const rows = sheetRowsById_();
+  const queue = Object.keys(rows).filter(function(vid) {
+    const html = props.getProperty("vid_html_" + vid) || "";
+    const art = html.match(/<article[\s\S]*<\/article>/i);
+    return art && tagNestingError_(art[0]);
+  });
+  if (!queue.length) { Logger.log("No broken pages."); return; }
+  props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
+  props.setProperty(REGEN_FAILED_KEY_, "[]");
+  stopRegenerationTrigger_();
+  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
+  Logger.log("Rewriting broken pages: " + queue.join(", "));
   regenerateBatch();
 }
 
