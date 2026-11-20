@@ -588,7 +588,7 @@ function extractVideoId(url) {
 // ===========================================
 // Returns the <article class="summary"> fragment. The page around it
 // (head, stylesheet, navigation, footer) is built by buildSummaryPage_.
-function generateHTMLWithClaude(transcript, title, sourceUrl) {
+function callClaude_(prompt, maxTokens) {
   const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
     method: "post",
     muteHttpExceptions: true,
@@ -599,17 +599,77 @@ function generateHTMLWithClaude(transcript, title, sourceUrl) {
     },
     payload: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 6000,
-      messages: [{ role: "user", content: buildPrompt(transcript, title, sourceUrl) }]
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }]
     })
   });
-
   const result = JSON.parse(response.getContentText());
   if (result.error) throw new Error("Claude API: " + result.error.message);
+  return result.content[0].text;
+}
 
-  const text = result.content[0].text;
-  const art = text.match(/<article[\s\S]*<\/article>/i);
-  return art ? stripEmoji_(art[0].trim()) : text.trim();
+function extractArticle_(text) {
+  const art = String(text || "").match(/<article[\s\S]*<\/article>/i);
+  return art ? stripEmoji_(art[0].trim()) : String(text || "").trim();
+}
+
+function generateHTMLWithClaude(transcript, title, sourceUrl) {
+  return extractArticle_(callClaude_(buildPrompt(transcript, title, sourceUrl), 6000));
+}
+
+// ===========================================
+// FACT CHECK
+// ===========================================
+// The IRON RULE in the prompt is an instruction, not a guarantee. Every summary
+// is checked against the transcript by a second call before it is published:
+// each statement must be supported by the transcript. Unsupported statements are
+// sent back for one repair (remove, or correct to what the transcript says);
+// if anything is still unsupported, the summary is not published.
+
+// Summary as plain text, one statement block per line.
+function summaryPlainText_(fragment) {
+  return String(fragment || "")
+    .replace(/<\/(p|li|h1|h2|h3|dd|dt|blockquote|figcaption)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .split("\n").map(function(l) { return l.replace(/\s+/g, " ").trim(); })
+    .filter(function(l) { return l; }).join("\n");
+}
+
+// Returns a list of {text, why} for statements the transcript does not support.
+function factCheckSummary_(fragment, transcript) {
+  const prompt =
+    "You are a strict fact checker. Below is a TRANSCRIPT of a video and a Hebrew SUMMARY of it.\n" +
+    "Check every statement in the SUMMARY against the TRANSCRIPT.\n" +
+    "A statement is UNSUPPORTED if any part of it is not said in the transcript: a fact, number, price, " +
+    "name, tool, step, recommendation, example, cause or claim that the speaker did not state. " +
+    "Paraphrase and translation are fine. Headings, the section label 'מה עושים עם זה', the line listing tools " +
+    "(if those tools are named in the transcript) and the source line are fine.\n" +
+    "An action step is supported only if the speaker suggested that action or it directly restates something the speaker said to do.\n" +
+    "Do not judge style, length or quality. Only support.\n\n" +
+    "Return ONLY JSON, no other text: {\"unsupported\":[{\"text\":\"exact Hebrew text from the summary\",\"why\":\"short reason in English\"}]}\n" +
+    "If everything is supported return {\"unsupported\":[]}.\n\n" +
+    "SUMMARY:\n" + summaryPlainText_(fragment) + "\n\n" +
+    "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
+  const text = callClaude_(prompt, 2000);
+  const json = text.match(/\{[\s\S]*\}/);
+  if (!json) throw new Error("Fact check returned no JSON");
+  const data = JSON.parse(json[0]);
+  return Array.isArray(data.unsupported) ? data.unsupported.filter(function(u) { return u && u.text; }) : [];
+}
+
+function repairSummary_(fragment, unsupported, transcript) {
+  const prompt =
+    "Below is a Hebrew summary (HTML fragment) of a video, its TRANSCRIPT, and a list of statements in the summary " +
+    "that the transcript does NOT support.\n" +
+    "Return the same fragment with each listed statement either removed, or corrected so it says only what the transcript says. " +
+    "Change nothing else: same HTML structure, same classes, same attributes. If removing a statement leaves an empty " +
+    "list item or paragraph, remove that element. Keep at least 3 items in the s-actions list only if the transcript supports them.\n" +
+    "Return ONLY the <article> fragment.\n\n" +
+    "UNSUPPORTED:\n" + unsupported.map(function(u) { return "- " + u.text + " (" + (u.why || "") + ")"; }).join("\n") + "\n\n" +
+    "FRAGMENT:\n" + fragment + "\n\n" +
+    "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
+  return extractArticle_(callClaude_(prompt, 6000));
 }
 
 // ===========================================
@@ -617,8 +677,8 @@ function generateHTMLWithClaude(transcript, title, sourceUrl) {
 // ===========================================
 // A summary page goes public (Netlify) and lands in inboxes the moment it is
 // generated, so it must be checked BEFORE deploy, not after. The gate verifies
-// the structure and the length the prompt demands; content quality stays on the
-// prompt's IRON RULE. Claude output varies between calls, so one retry is worth
+// the structure and the length the prompt demands; the fact check below verifies
+// that every statement comes from the transcript. Claude output varies between calls, so one retry is worth
 // it; a second failure marks the row Error and alerts the owner instead of
 // publishing a broken page.
 const MAX_SUMMARY_WORDS_ = 520; // prompt asks for ~350; this is the hard ceiling
@@ -665,12 +725,26 @@ function checkFigure_(fragment, transcript) {
 function generateValidatedHtml_(transcript, title, sourceUrl, topic) {
   let problems = [];
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const fragment = generateHTMLWithClaude(transcript, title, sourceUrl);
+    let fragment = generateHTMLWithClaude(transcript, title, sourceUrl);
     problems = validateSummaryHtml_(fragment, transcript);
-    if (problems.length === 0) {
+    if (problems.length) {
+      Logger.log("Quality gate attempt " + attempt + " failed: " + problems.join("; "));
+      continue;
+    }
+    // Fact check, one repair, check again.
+    let unsupported = factCheckSummary_(fragment, transcript);
+    if (unsupported.length) {
+      Logger.log("Fact check: " + unsupported.length + " unsupported, repairing: " + JSON.stringify(unsupported));
+      fragment = repairSummary_(fragment, unsupported, transcript);
+      problems = validateSummaryHtml_(fragment, transcript);
+      unsupported = problems.length ? [] : factCheckSummary_(fragment, transcript);
+    }
+    if (!problems.length && !unsupported.length) {
+      Logger.log("Fact check passed (attempt " + attempt + ")");
       return buildSummaryPage_(checkFigure_(fragment, transcript), { topic: topic, title: title, sourceUrl: sourceUrl });
     }
-    Logger.log("Quality gate attempt " + attempt + " failed: " + problems.join("; "));
+    unsupported.forEach(function(u) { problems.push("unsupported by transcript: " + u.text + " (" + (u.why || "") + ")"); });
+    Logger.log("Attempt " + attempt + " failed: " + problems.join("; "));
   }
   sendQualityAlert_(title, sourceUrl, problems);
   throw new Error("Quality gate: " + problems.join("; "));
@@ -1289,7 +1363,7 @@ function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
 // ===========================================
 // Rewrites every published summary with the current prompt. Sends NO emails:
 // not to subscribers and not to the owner per video. Runs in small batches
-// (Apps Script stops a run after 6 minutes), driven by its own time trigger,
+// (one per run: Apps Script stops a run after 6 minutes), driven by its own time trigger,
 // and redeploys the site once at the end.
 //
 // Run startRegeneration() once from the editor. Progress is in the log;
@@ -1299,7 +1373,7 @@ function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
 // page of each video is kept in Drive as legacy-backup_<videoId>.html.txt.
 const REGEN_QUEUE_KEY_ = "regen_queue";
 const REGEN_FAILED_KEY_ = "regen_failed";
-const REGEN_BATCH_ = 2;
+const REGEN_BATCH_ = 1; // one video per run: generate + fact check can take several minutes
 
 function startRegeneration() {
   assertConfig_();
@@ -1315,7 +1389,7 @@ function startRegeneration() {
   props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
   props.setProperty(REGEN_FAILED_KEY_, "[]");
   stopRegenerationTrigger_();
-  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(10).create();
+  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
   Logger.log("Regeneration queued: " + queue.length + " summaries. First batch runs now.");
   regenerateBatch();
 }
