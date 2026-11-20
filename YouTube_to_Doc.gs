@@ -330,7 +330,13 @@ function buildIndexPage(videos, htmlById) {
   let quoteItem = null;
   items.forEach(function(it) { if (!quoteItem && it.info.quote) quoteItem = it; });
 
-  function esc(s) { return escHtml_(stripEmoji_(s)); }
+  // Escapes text and isolates each English run in <bdi>, so mixed
+  // Hebrew/English titles keep their word order (e.g. "ה-Workflow שלי ב-Claude Code").
+  function esc(s) {
+    return stripEmoji_(s).replace(/[A-Za-z][A-Za-z0-9.+#'’ -]*[A-Za-z0-9]|[A-Za-z]|[^A-Za-z]+/g, function(t) {
+      return /^[A-Za-z]/.test(t) ? "<bdi>" + escHtml_(t) + "</bdi>" : escHtml_(t);
+    });
+  }
 
   // ---- featured ----
   let featuredHtml = "";
