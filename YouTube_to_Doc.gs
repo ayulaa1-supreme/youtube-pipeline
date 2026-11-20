@@ -1455,6 +1455,12 @@ function regenerateBatch() {
         Logger.log("Regeneration failed for " + vid + ": " + err.message);
       }
       done++;
+      // Re-read before writing: startRegeneration() may have reset the queue
+      // while this video was being processed. Remove only this video.
+      const stored = JSON.parse(props.getProperty(REGEN_QUEUE_KEY_) || "[]");
+      const at = stored.indexOf(vid);
+      if (at !== -1) stored.splice(at, 1);
+      queue.length = 0; Array.prototype.push.apply(queue, stored);
       props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
       props.setProperty(REGEN_FAILED_KEY_, JSON.stringify(failed));
     }
