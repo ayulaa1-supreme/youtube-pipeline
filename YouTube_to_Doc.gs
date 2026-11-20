@@ -1365,6 +1365,22 @@ function startRegeneration() {
   regenerateBatch();
 }
 
+// Re-queue only the videos that failed in the last regeneration.
+function retryFailedRegeneration() {
+  assertConfig_();
+  const props = PropertiesService.getScriptProperties();
+  const failed = JSON.parse(props.getProperty(REGEN_FAILED_KEY_) || "[]");
+  const queue = failed.map(function(f) { return String(f).split(":")[0].trim(); })
+    .filter(function(v, i, arr) { return /^[A-Za-z0-9_-]{11}$/.test(v) && arr.indexOf(v) === i; });
+  if (!queue.length) { Logger.log("Nothing to retry."); return; }
+  props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
+  props.setProperty(REGEN_FAILED_KEY_, "[]");
+  stopRegenerationTrigger_();
+  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
+  Logger.log("Retrying " + queue.length + ": " + queue.join(", "));
+  regenerateBatch();
+}
+
 function regenerationStatus() {
   const props = PropertiesService.getScriptProperties();
   Logger.log("Left: " + (props.getProperty(REGEN_QUEUE_KEY_) || "[]"));
