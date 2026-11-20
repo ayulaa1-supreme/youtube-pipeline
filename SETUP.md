@@ -96,5 +96,6 @@ Both are safe: the script takes a lock, so overlapping trigger firings can't dou
 ## Security notes
 
 - Secrets live only in Script Properties — never in code, never in git.
-- Deletion requires `ADMIN_CODE` server-side; the public page embeds only a one-way SHA-256 verifier.
+- Deletion requires `ADMIN_CODE` server-side, sent by POST only; the public page embeds only a one-way SHA-256 verifier.
+- To delete a video: open `<your-site>.netlify.app/#admin`, enter the admin code, and the delete buttons appear.
 - If you ever suspect the admin code leaked, just change the `ADMIN_CODE` property and let the next video (or `redeployIndex()`) refresh the page.

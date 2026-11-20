@@ -117,6 +117,20 @@ This revision (`v2026-06-30`) addresses three real issues found in code review:
 | **Admin code exposure** | The index page embedded `base64(ADMIN_CODE)` — reversible by anyone via view-source. Replaced with a one-way SHA-256 verifier | The delete-endpoint protection was effectively bypassable. After updating, **rotate your `ADMIN_CODE`** — the old one should be treated as public. |
 | **Fail-fast config check** | `assertConfig_()` validates required properties (and that `NETLIFY_SITE` is a bare name, not a URL) before any run | A wrong `NETLIFY_SITE` used to silently create a junk Netlify site; missing keys surfaced as cryptic 401s deep in the pipeline. |
 
+### Revision `v2026-11-20`
+
+| Fix | What changed | Why it matters |
+|---|---|---|
+| **No admin UI in public HTML** | Banner, delete buttons and lock icon are no longer in the page. Open `<site>/#admin`, enter the code, and they are created client-side | Crawlers, link previews and reader modes ignore CSS, so they showed the admin banner and delete buttons to everyone. |
+| **Delete via POST only** | New `doPost` handles `action=delete`; the GET route is gone | The admin code no longer appears in URLs or Apps Script request logs. |
+| **Real numbers in HTML** | Video and topic counters are rendered server-side; cards stay visible without JS; topic count = topics that have videos | Without JS (previews, crawlers) the page showed 0 videos and invisible cards. |
+| **Share previews** | `og:` / description tags on the index and on every summary page (injected at deploy) | WhatsApp / LinkedIn showed a bare URL. |
+| **Honest subscribe status** | Subscribe reads the JSON response and shows an error on failure | The form used to show success even when the request failed. |
+| **Static folder** | Images (`og-*.png`) are deployed too; summary backups (`<title>_<videoId>.html`) in the same folder are skipped | Backups were being published a second time under odd URLs. |
+| **Hebrew topic labels** | `TOPIC_LABELS` maps sheet topics to display names | Consistent Hebrew UI; sheet values unchanged. |
+
+After updating: **Deploy → Manage deployments → edit → New version** (keeps the same `/exec` URL), access **Anyone**, then run `redeployIndex()`. To delete a video, open `<site>/#admin`.
+
 ---
 
 ## Sync with clasp (optional)
