@@ -128,7 +128,8 @@ This revision (`v2026-06-30`) addresses three real issues found in code review:
 | **Magazine index** | New `buildIndexPage`: newest summary as cover story, pull quote, numbered table of contents with topic filter and search, key figure per summary in its topic color | Replaces the carousels. Admin (`#admin`) and subscribe keep working. |
 | **Topic colors** | AI Tools pink, Productivity teal, Entrepreneurship blue (`TOPIC_COLORS_`) | The reader sees the topic before reading it. |
 | **Fonts** | IBM Plex Sans Hebrew + Space Mono, loaded from Google Fonts | Segoe UI exists only on Windows; phones and Macs fell back to Arial. |
-| **Regeneration without emails** | `startRegeneration()` rewrites every published summary in the short format, 2 per run on a 10-minute trigger, then redeploys once and emails the owner a report | Clearing the status column would have emailed every subscriber once per video. |
+| **Fact check before publishing** | Two agents: the writer, then one checker that gets only the summary and the transcript, removes invented statements and corrects distorted ones, and returns the clean summary with a change list (logged). Wording and framing are left alone; the checker may not add content | The "only what was said" rule was a prompt instruction with no check behind it. |
+| **Regeneration without emails** | `startRegeneration()` rewrites every published summary in the short format, 1 per run on a 5-minute trigger, each fact-checked, then redeploys once and emails the owner a report | Clearing the status column would have emailed every subscriber once per video. |
 
 After updating the code: run `redeployIndex()` (new design, old content). To rewrite the old summaries in the short format, run `startRegeneration()` once; `regenerationStatus()` shows progress.
 

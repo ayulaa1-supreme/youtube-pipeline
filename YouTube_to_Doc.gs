@@ -588,7 +588,7 @@ function extractVideoId(url) {
 // ===========================================
 // Returns the <article class="summary"> fragment. The page around it
 // (head, stylesheet, navigation, footer) is built by buildSummaryPage_.
-function generateHTMLWithClaude(transcript, title, sourceUrl) {
+function callClaude_(prompt, maxTokens) {
   const response = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
     method: "post",
     muteHttpExceptions: true,
@@ -599,17 +599,52 @@ function generateHTMLWithClaude(transcript, title, sourceUrl) {
     },
     payload: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 6000,
-      messages: [{ role: "user", content: buildPrompt(transcript, title, sourceUrl) }]
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }]
     })
   });
-
   const result = JSON.parse(response.getContentText());
   if (result.error) throw new Error("Claude API: " + result.error.message);
+  return result.content[0].text;
+}
 
-  const text = result.content[0].text;
-  const art = text.match(/<article[\s\S]*<\/article>/i);
-  return art ? stripEmoji_(art[0].trim()) : text.trim();
+function extractArticle_(text) {
+  const art = String(text || "").match(/<article[\s\S]*<\/article>/i);
+  return art ? stripEmoji_(art[0].trim()) : String(text || "").trim();
+}
+
+function generateHTMLWithClaude(transcript, title, sourceUrl) {
+  return extractArticle_(callClaude_(buildPrompt(transcript, title, sourceUrl), 6000));
+}
+
+// ===========================================
+// FACT CHECK (second agent)
+// ===========================================
+// Two agents: the writer (generateHTMLWithClaude) and one checker. The IRON RULE
+// in the writer's prompt is an instruction, not a guarantee, so before a summary
+// is published the checker compares it with the transcript, fixes or removes
+// every statement the transcript does not support, and returns the clean summary
+// with a list of what it changed. It sees only the summary and the transcript,
+// not the writer's instructions.
+function factCheckAndFix_(fragment, transcript) {
+  const prompt =
+    "You are a strict fact checker. Below is a TRANSCRIPT of a video and a Hebrew SUMMARY of it (an HTML fragment).\n" +
+    "Check every statement in the SUMMARY against the TRANSCRIPT and fix only real problems:\n" +
+    "- invented: a fact, number, price, name, tool, feature or claim that the transcript does not contain at all -> remove it.\n" +
+    "- distorted: the transcript says something materially different (wrong number, wrong tool, reversed meaning, overstated certainty) -> correct it to what the transcript says.\n" +
+    "Do NOT change wording, emphasis, framing, grouping or labels that mean the same thing. An action step is fine if it is based on something " +
+    "the speaker recommended, suggested, demonstrated or gave as a tip. Never add new content.\n" +
+    "If removing a statement leaves an empty list item or paragraph, remove that element. Keep the same HTML structure, classes and attributes.\n\n" +
+    "Output exactly two blocks and nothing else:\n" +
+    "1. The full corrected <article>...</article> fragment (unchanged if nothing was wrong).\n" +
+    "2. <changes>one line per change: 'removed: <text> | <reason in English>' or 'fixed: <old> -> <new> | <reason>'. Empty if nothing changed.</changes>\n\n" +
+    "SUMMARY:\n" + fragment + "\n\n" +
+    "TRANSCRIPT:\n" + String(transcript || "").substring(0, MAX_TRANSCRIPT_CHARS_);
+  const text = callClaude_(prompt, 6000);
+  const fixed = extractArticle_(text.replace(/<changes>[\s\S]*?<\/changes>/i, ""));
+  const ch = text.match(/<changes>([\s\S]*?)<\/changes>/i);
+  const changes = ch ? ch[1].split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l; }) : [];
+  return { fragment: fixed, changes: changes };
 }
 
 // ===========================================
@@ -617,8 +652,8 @@ function generateHTMLWithClaude(transcript, title, sourceUrl) {
 // ===========================================
 // A summary page goes public (Netlify) and lands in inboxes the moment it is
 // generated, so it must be checked BEFORE deploy, not after. The gate verifies
-// the structure and the length the prompt demands; content quality stays on the
-// prompt's IRON RULE. Claude output varies between calls, so one retry is worth
+// the structure and the length the prompt demands; the fact check below verifies
+// that every statement comes from the transcript. Claude output varies between calls, so one retry is worth
 // it; a second failure marks the row Error and alerts the owner instead of
 // publishing a broken page.
 const MAX_SUMMARY_WORDS_ = 520; // prompt asks for ~350; this is the hard ceiling
@@ -640,6 +675,8 @@ function validateSummaryHtml_(fragment, transcript) {
   ["s-tldr", "s-part", "s-actions"].forEach(function(cls) {
     if (fragment.indexOf(cls) === -1) problems.push("missing section: ." + cls);
   });
+  const bad = tagNestingError_(fragment);
+  if (bad) problems.push("broken HTML structure: " + bad);
   const h1 = extractHebrewTitle(fragment);
   if (!h1 || !/[א-ת]/.test(h1)) problems.push("h1 missing or not Hebrew");
   const words = countWords_(fragment);
@@ -648,6 +685,25 @@ function validateSummaryHtml_(fragment, transcript) {
   const nActions = (actions.match(/<li\b/gi) || []).length;
   if (nActions > 5) problems.push("too many action steps: " + nActions + " (max 5)");
   return problems;
+}
+
+// Checks that block tags open and close in the right order. A swapped pair
+// (e.g. </section></div>) makes the browser end the article early and the rest
+// of the page falls outside the layout. Returns "" when the nesting is valid.
+function tagNestingError_(html) {
+  const tracked = /^(article|header|section|div|ol|ul|li|dl|dt|dd|p|h1|h2|h3|figure|blockquote|figcaption)$/;
+  const stack = [];
+  const re = /<(\/?)([a-z0-9]+)\b[^>]*?(\/?)>/gi;
+  let m;
+  while ((m = re.exec(String(html || "")))) {
+    const tag = m[2].toLowerCase();
+    if (!tracked.test(tag) || m[3]) continue;
+    if (!m[1]) { stack.push(tag); continue; }
+    if (!stack.length) return "</" + tag + "> without an opening tag";
+    const open = stack.pop();
+    if (open !== tag) return "<" + open + "> closed by </" + tag + ">";
+  }
+  return stack.length ? "<" + stack[stack.length - 1] + "> never closed" : "";
 }
 
 // The key figure on the index card must come from the video, not from Claude.
@@ -665,12 +721,22 @@ function checkFigure_(fragment, transcript) {
 function generateValidatedHtml_(transcript, title, sourceUrl, topic) {
   let problems = [];
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const fragment = generateHTMLWithClaude(transcript, title, sourceUrl);
+    let fragment = generateHTMLWithClaude(transcript, title, sourceUrl);
     problems = validateSummaryHtml_(fragment, transcript);
-    if (problems.length === 0) {
-      return buildSummaryPage_(checkFigure_(fragment, transcript), { topic: topic, title: title, sourceUrl: sourceUrl });
+    if (problems.length) {
+      Logger.log("Quality gate attempt " + attempt + " failed: " + problems.join("; "));
+      continue;
     }
-    Logger.log("Quality gate attempt " + attempt + " failed: " + problems.join("; "));
+    // Second agent: check against the transcript and fix.
+    const checked = factCheckAndFix_(fragment, transcript);
+    Logger.log("Fact check: " + (checked.changes.length ? checked.changes.length + " change(s): " + checked.changes.join(" || ") : "no changes"));
+    problems = validateSummaryHtml_(checked.fragment, transcript);
+    // The checker may only remove or correct, never add.
+    if (!problems.length && countWords_(checked.fragment) > countWords_(fragment) + 20) problems.push("checker added content");
+    if (!problems.length) {
+      return buildSummaryPage_(checkFigure_(checked.fragment, transcript), { topic: topic, title: title, sourceUrl: sourceUrl });
+    }
+    Logger.log("Attempt " + attempt + " failed: " + problems.join("; "));
   }
   sendQualityAlert_(title, sourceUrl, problems);
   throw new Error("Quality gate: " + problems.join("; "));
@@ -1289,7 +1355,7 @@ function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
 // ===========================================
 // Rewrites every published summary with the current prompt. Sends NO emails:
 // not to subscribers and not to the owner per video. Runs in small batches
-// (Apps Script stops a run after 6 minutes), driven by its own time trigger,
+// (one per run: Apps Script stops a run after 6 minutes), driven by its own time trigger,
 // and redeploys the site once at the end.
 //
 // Run startRegeneration() once from the editor. Progress is in the log;
@@ -1299,7 +1365,7 @@ function sendEmailNotification(title, youtubeUrl, netlifyUrl, topic) {
 // page of each video is kept in Drive as legacy-backup_<videoId>.html.txt.
 const REGEN_QUEUE_KEY_ = "regen_queue";
 const REGEN_FAILED_KEY_ = "regen_failed";
-const REGEN_BATCH_ = 2;
+const REGEN_BATCH_ = 1; // one video per run: generate + fact check can take several minutes
 
 function startRegeneration() {
   assertConfig_();
@@ -1315,8 +1381,43 @@ function startRegeneration() {
   props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
   props.setProperty(REGEN_FAILED_KEY_, "[]");
   stopRegenerationTrigger_();
-  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(10).create();
+  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
   Logger.log("Regeneration queued: " + queue.length + " summaries. First batch runs now.");
+  regenerateBatch();
+}
+
+// Finds published summaries whose HTML structure is broken and rewrites them.
+function regenerateMalformed() {
+  assertConfig_();
+  const props = PropertiesService.getScriptProperties();
+  const rows = sheetRowsById_();
+  const queue = Object.keys(rows).filter(function(vid) {
+    const html = props.getProperty("vid_html_" + vid) || "";
+    const art = html.match(/<article[\s\S]*<\/article>/i);
+    return art && tagNestingError_(art[0]);
+  });
+  if (!queue.length) { Logger.log("No broken pages."); return; }
+  props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
+  props.setProperty(REGEN_FAILED_KEY_, "[]");
+  stopRegenerationTrigger_();
+  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
+  Logger.log("Rewriting broken pages: " + queue.join(", "));
+  regenerateBatch();
+}
+
+// Re-queue only the videos that failed in the last regeneration.
+function retryFailedRegeneration() {
+  assertConfig_();
+  const props = PropertiesService.getScriptProperties();
+  const failed = JSON.parse(props.getProperty(REGEN_FAILED_KEY_) || "[]");
+  const queue = failed.map(function(f) { return String(f).split(":")[0].trim(); })
+    .filter(function(v, i, arr) { return /^[A-Za-z0-9_-]{11}$/.test(v) && arr.indexOf(v) === i; });
+  if (!queue.length) { Logger.log("Nothing to retry."); return; }
+  props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
+  props.setProperty(REGEN_FAILED_KEY_, "[]");
+  stopRegenerationTrigger_();
+  ScriptApp.newTrigger("regenerateBatch").timeBased().everyMinutes(5).create();
+  Logger.log("Retrying " + queue.length + ": " + queue.join(", "));
   regenerateBatch();
 }
 
@@ -1381,6 +1482,12 @@ function regenerateBatch() {
         Logger.log("Regeneration failed for " + vid + ": " + err.message);
       }
       done++;
+      // Re-read before writing: startRegeneration() may have reset the queue
+      // while this video was being processed. Remove only this video.
+      const stored = JSON.parse(props.getProperty(REGEN_QUEUE_KEY_) || "[]");
+      const at = stored.indexOf(vid);
+      if (at !== -1) stored.splice(at, 1);
+      queue.length = 0; Array.prototype.push.apply(queue, stored);
       props.setProperty(REGEN_QUEUE_KEY_, JSON.stringify(queue));
       props.setProperty(REGEN_FAILED_KEY_, JSON.stringify(failed));
     }
