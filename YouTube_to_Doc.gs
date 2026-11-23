@@ -333,7 +333,7 @@ function sha256Hex_(s) {
 }
 
 // videos: sheet order (oldest first). htmlById: stored summary pages, used for
-// the one-line description, the key figure and the pull quote.
+// the one-line description on each card.
 function buildIndexPage(videos, htmlById) {
   htmlById = htmlById || {};
   const props = PropertiesService.getScriptProperties();
@@ -349,10 +349,6 @@ function buildIndexPage(videos, htmlById) {
   const topicOrder = CONFIG.TOPICS.concat(["General"]).filter(function(t) { return topicsUsed.indexOf(t) !== -1; })
     .concat(topicsUsed.filter(function(t) { return CONFIG.TOPICS.indexOf(t) === -1 && t !== "General"; }));
 
-  const featured = items[0];
-  let quoteItem = null;
-  items.forEach(function(it) { if (!quoteItem && it.info.quote) quoteItem = it; });
-
   // Escapes text and isolates each English run in <bdi>, so mixed
   // Hebrew/English titles keep their word order (e.g. "ה-Workflow שלי ב-Claude Code").
   function esc(s) {
@@ -361,42 +357,18 @@ function buildIndexPage(videos, htmlById) {
     });
   }
 
-  // ---- featured ----
-  let featuredHtml = "";
-  if (featured) {
-    const f = featured;
-    featuredHtml =
-      '<section class="cover" data-topic="' + topicKey_(f.topic) + '" aria-labelledby="cover-title">' +
-      (f.info.figure ? '<div class="cover-fig"><span class="cover-num" aria-hidden="true">' + esc(f.info.figure) + '</span>' +
-        (f.info.figureLabel ? '<span class="cover-lab">' + esc(f.info.figureLabel) + '</span>' : '') + '</div>' : '') +
-      '<div class="cover-body">' +
-      '<span class="kicker">הסיכום החדש · ' + esc(topicLabel_(f.topic)) + '</span>' +
-      '<h2 id="cover-title">' + esc(f.v.title || f.v.videoId) + '</h2>' +
-      (f.info.dek ? '<p class="cover-dek">' + esc(f.info.dek) + '</p>' : '') +
-      '<a class="cover-link" href="' + f.v.videoId + '.html">לקריאת הסיכום ←</a>' +
-      '</div></section>';
-  }
-
-  // ---- pull quote ----
-  let quoteHtml = "";
-  if (quoteItem) {
-    quoteHtml = '<figure class="pull"><blockquote>״' + esc(quoteItem.info.quote.replace(/^["״“]|["״”]$/g, "")) + '״</blockquote>' +
-      '<figcaption>מתוך: <a href="' + quoteItem.v.videoId + '.html">' + esc(quoteItem.v.title) + '</a></figcaption></figure>';
-  }
-
-  // ---- table of contents ----
+  // ---- library list ----
+  // Hooks the page script and the admin delete rely on — keep them:
+  // #toc, #srch, #no-res, .toc-item[data-t], a.video-card[data-vid], .card-title, .tab[data-f]
+  // The subscribe form was removed from the page (Nov 2026). doSubscribe() and the backend stay, so it can return.
   let rows = "";
   items.forEach(function(it, i) {
     const v = it.v;
-    rows += '<li class="toc-item' + (i === 0 ? ' is-featured' : '') + '" data-topic="' + topicKey_(it.topic) + '" data-t="' + escHtml_(it.topic) + '">' +
+    rows += '<li class="toc-item" data-topic="' + topicKey_(it.topic) + '" data-t="' + escHtml_(it.topic) + '">' +
       '<a href="' + v.videoId + '.html" class="video-card" data-vid="' + v.videoId + '">' +
-      '<div class="toc-main">' +
-      '<span class="toc-cat">' + esc(topicLabel_(it.topic)) + '</span>' +
+      '<span class="toc-cat">' + esc(topicLabel_(it.topic)) + (i === 0 ? '<span class="toc-new">חדש</span>' : '') + '</span>' +
       '<h3 class="card-title">' + esc(v.title || v.videoId) + '</h3>' +
       (it.info.dek ? '<p class="toc-dek">' + esc(it.info.dek) + '</p>' : '') +
-      '</div>' +
-      '<div class="toc-fig">' + (it.info.figure ? '<span class="toc-num">' + esc(it.info.figure) + '</span>' +
-        (it.info.figureLabel ? '<span class="toc-lab">' + esc(it.info.figureLabel) + '</span>' : '') : '') + '</div>' +
       '</a></li>';
   });
 
@@ -404,71 +376,60 @@ function buildIndexPage(videos, htmlById) {
   topicOrder.forEach(function(t) {
     const n = items.filter(function(it) { return it.topic === t; }).length;
     tabs += '<button type="button" class="tab" aria-pressed="false" data-f="' + escHtml_(t) + '" data-topic="' + topicKey_(t) + '">' +
-      '<span class="tdot" aria-hidden="true"></span>' + esc(topicLabel_(t)) + ' <span class="cnt">' + n + '</span></button>';
+      esc(topicLabel_(t)) + ' <span class="cnt">' + n + '</span></button>';
   });
 
+  // Colour on this page: only the pink brand dot. Everything else is ink and thin rules,
+  // in the same type and spacing as the summary pages (summary.css).
   const css =
-    ".wrap{max-width:1140px}" +
-    ".mast{padding-top:28px}" +
-    ".mast-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--ink);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.5px;color:var(--muted2)}" +
-    ".mast-mid{padding:56px 0 44px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}" +
-    ".mast h1{margin:0;font-weight:200;font-size:clamp(40px,10vw,104px);line-height:1.05;letter-spacing:-1.5px}" +
-    ".mast h1 span{color:#EC4899}" +
-    ".mast-mid p{margin:0;max-width:600px;font-weight:300;font-size:20px;line-height:1.6;color:var(--ink2)}" +
-    ".mast-mid .how{font-size:15px;font-weight:400}" +
-    ".mast-mid .how a{color:var(--ink);text-decoration-color:#EC4899;text-underline-offset:5px}" +
-    ".cover{padding:64px 0;border-bottom:1px solid var(--rule);display:flex;flex-wrap:wrap;align-items:center;gap:32px 64px}" +
-    ".cover-fig{flex:1 1 240px;display:flex;flex-direction:column;align-items:center;gap:8px}" +
-    ".cover-num{font-weight:200;font-size:clamp(110px,16vw,220px);line-height:.85;color:var(--accent)}" +
-    ".cover-lab{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:1px;color:var(--muted2)}" +
-    ".cover-body{flex:999 1 480px;min-width:0;display:flex;flex-direction:column;gap:18px}" +
-    ".kicker{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--accent)}" +
-    ".cover h2{margin:0;font-weight:300;font-size:clamp(30px,4vw,44px);line-height:1.2}" +
-    ".cover-dek{margin:0;max-width:580px;font-size:18px;line-height:1.75;color:var(--ink2)}" +
-    ".cover-link{align-self:flex-start;display:inline-flex;align-items:center;min-height:44px;font-size:16px;font-weight:600;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:6px}" +
-    ".pull{margin:0;padding:72px 0;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}" +
-    ".pull blockquote{margin:0;max-width:820px;font-weight:200;font-size:clamp(26px,3.6vw,38px);line-height:1.45}" +
-    ".pull figcaption{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2)}" +
-    ".pull figcaption a{color:var(--muted2)}" +
-    ".lib{padding:64px 0 24px;display:flex;flex-direction:column;gap:26px}" +
-    ".lib-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px}" +
-    ".lib-head h2{margin:0;font-weight:300;font-size:40px;line-height:1}" +
-    ".srch{flex:0 1 300px;min-width:220px}" +
+    ":root{--pink:#EC4899}" +
+    ".mast-top{display:flex;justify-content:space-between;gap:12px;padding:24px 0 12px;border-bottom:1px solid var(--ink);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.5px;color:var(--muted2)}" +
+    ".mast-top a{text-decoration:none;color:var(--ink)}" +
+    ".hero{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding:28px 0 20px;border-bottom:1px solid var(--rule)}" +
+    ".hero-txt{display:flex;flex-direction:column;gap:16px}" +
+    ".hero h1{margin:0;font-weight:200;font-size:clamp(40px,11vw,64px);line-height:1.05;letter-spacing:-1px}" +
+    ".hero h1 span{color:var(--pink)}" +
+    ".hero-dek{margin:0;max-width:520px;font-weight:300;font-size:19px;line-height:1.6;color:var(--ink2)}" +
+    ".steps{list-style:none;margin:0;padding:0;counter-reset:st;border-bottom:1px solid var(--rule)}" +
+    ".steps li{counter-increment:st;display:grid;grid-template-columns:32px minmax(0,1fr);gap:2px 12px;padding:12px 0;border-top:1px solid var(--rule)}" +
+    ".steps li::before{content:counter(st,decimal-leading-zero);grid-row:span 2;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2);padding-top:4px}" +
+    ".steps b{font-weight:600;font-size:16px;line-height:1.5}" +
+    ".steps span{font-size:14px;line-height:1.55;color:var(--muted)}" +
+    ".hero-links{display:flex;margin-top:2px}" +
+    ".hero-links a{display:inline-flex;align-items:center;min-height:44px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.5px;text-decoration:none}" +
+    ".lib{padding:28px 0 8px;display:flex;flex-direction:column;gap:20px}" +
+    ".lib-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}" +
+    ".lib-head h2{margin:0;font-weight:300;font-size:28px;line-height:1.2}" +
+    ".srch{flex:0 1 300px;min-width:0}" +
     ".srch input{width:100%;height:44px;padding:0 2px;border:none;border-bottom:1px solid var(--ink);background:transparent;font-family:inherit;font-size:16px;color:var(--ink);border-radius:0}" +
-    ".tabs{display:flex;flex-wrap:wrap;gap:4px 28px;border-bottom:1px solid var(--rule)}" +
-    ".tab{min-height:44px;padding:0;margin-bottom:-1px;background:transparent;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:15px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}" +
-    ".tab[aria-pressed=true]{border-bottom-color:var(--ink);font-weight:600}" +
-    ".tdot{width:8px;height:8px;border-radius:50%;background:var(--accent)}" +
+    ".tabs{display:flex;flex-wrap:wrap;gap:0 22px;border-bottom:1px solid var(--rule)}" +
+    ".tab{min-height:44px;padding:0;margin-bottom:-1px;background:transparent;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:15px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}" +
+    ".tab[aria-pressed=true]{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}" +
     ".cnt{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2)}" +
-    ".toc{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));column-gap:64px;counter-reset:toc}" +
-    ".toc-item{counter-increment:toc}" +
-    ".toc[data-mode=all] .is-featured{display:none}" +
-    ".admin-mode .toc .is-featured{display:block}" +
-    ".video-card{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr) 84px;gap:20px;padding:26px 0;border-bottom:1px solid var(--rule);text-decoration:none;color:var(--ink)}" +
-    ".video-card::before{content:counter(toc,decimal-leading-zero);font-family:'Space Mono',monospace;font-size:12px;color:#8A92A6;padding-top:6px}" +
-    ".toc-main{display:flex;flex-direction:column;gap:8px;min-width:0}" +
-    ".toc-cat{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent)}" +
-    ".card-title{margin:0;font-weight:500;font-size:21px;line-height:1.4}" +
-    ".video-card:hover .card-title{text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:5px}" +
+    ".toc{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr)}" +
+    ".video-card{position:relative;display:flex;flex-direction:column;gap:6px;padding:22px 0;border-bottom:1px solid var(--rule);text-decoration:none;color:var(--ink)}" +
+    ".toc-cat{display:flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2)}" +
+    ".toc-new{font-weight:700;color:var(--ink)}" +
+    ".toc-new::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pink);margin-left:6px;vertical-align:1px}" +
+    ".card-title{margin:0;font-weight:500;font-size:19px;line-height:1.45}" +
+    ".video-card:hover .card-title{text-decoration:underline;text-decoration-color:var(--pink);text-underline-offset:5px}" +
     ".toc-dek{margin:0;font-size:15px;line-height:1.65;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}" +
-    ".toc-fig{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:left}" +
-    ".toc-num{font-weight:200;font-size:44px;line-height:1;color:var(--accent)}" +
-    ".toc-lab{font-size:11px;line-height:1.3;color:var(--muted2)}" +
-    ".no-results{display:none;margin:0;padding:32px 0;text-align:center;font-size:18px;color:var(--muted2)}" +
-    ".sub{margin-top:48px;padding:48px 0;border-top:1px solid var(--ink);display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px}" +
-    ".sub h2{margin:0 0 6px;font-weight:300;font-size:32px}" +
-    ".sub p{margin:0;font-size:15px;color:var(--muted2)}" +
-    ".sub-form{flex:1 1 380px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}" +
-    ".sub-input{flex:1 1 220px;height:44px;padding:0 2px;border:none;border-bottom:1px solid var(--ink);background:transparent;font-family:inherit;font-size:16px;color:var(--ink);border-radius:0}" +
-    ".sub-btn{height:44px;padding:0 24px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}" +
-    ".sub-msg{width:100%;min-height:1.2em;font-size:14px;color:#0F766E}.sub-msg.err{color:#B91C1C}" +
-    ".foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:24px 0 40px;border-top:1px solid var(--rule);font-size:13px;color:var(--muted2)}" +
-    ".foot nav{display:flex;flex-wrap:wrap;gap:24px}" +
-    ".foot .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#EC4899;margin-right:6px}" +
-    ".delete-btn{display:none;position:absolute;top:22px;left:0;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:50%;width:26px;height:26px;font-size:.75rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;z-index:2;padding:0}" +
+    ".no-results{display:none;margin:0;padding:32px 0;text-align:center;font-size:17px;color:var(--muted2)}" +
+    ".foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px;margin-top:24px;padding:8px 0 40px;font-size:13px;color:var(--muted2)}" +
+    ".foot nav{display:flex;flex-wrap:wrap;gap:0 24px}" +
+    ".foot nav a{display:inline-flex;align-items:center;min-height:44px}" +
+    ".foot .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-right:6px}" +
+    ".delete-btn{display:none;position:absolute;top:20px;left:0;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:50%;width:26px;height:26px;font-size:.75rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;z-index:2;padding:0}" +
     ".admin-mode .delete-btn{display:flex}" +
+    ".admin-mode .video-card{padding-left:40px}" +
     ".admin-banner{background:#111827;color:#f9a8d4;text-align:center;padding:.5rem 1rem;font-size:.8rem;font-weight:600}" +
-    "@media(max-width:720px){.video-card{grid-template-columns:24px minmax(0,1fr) 64px;gap:14px}.toc-num{font-size:34px}.card-title{font-size:19px}.cover{padding:48px 0}}";
+    "@media(min-width:880px){" +
+    ".hero{gap:40px;padding:64px 0 48px}" +
+    ".hero-dek{font-size:21px}.steps b{font-size:17px}.steps span{font-size:15px}.steps li{padding:16px 0}" +
+    ".steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:40px;border-bottom:none}.steps li{border-top:1px solid var(--ink)}" +
+    ".lib{padding-top:56px}" +
+    ".toc{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:56px}" +
+    "}";
 
   return '<!DOCTYPE html>' +
 '<html lang="he" dir="rtl">' +
@@ -491,34 +452,35 @@ FONT_LINK_ +
 '<style>' + css + '</style>' +
 '</head><body>' +
 '<div class="wrap">' +
-'<header class="mast">' +
-'<div class="mast-top"><span>אילת שחק שול · בונה תהליכים פשוטים לעסקים</span><span>' + total + ' סיכומים · ' + topicOrder.length + ' נושאים</span></div>' +
-'<div class="mast-mid">' +
+'<header>' +
+'<div class="mast-top"><span>אילת שחק שול</span><span>' + total + ' סיכומים</span></div>' +
+'<div class="hero">' +
+'<div class="hero-txt">' +
 '<h1>ספריית הסיכומים<span>.</span></h1>' +
-'<p>סרטוני AI, מסוכמים בדיוק. רק מה שנאמר, עם צעדים לביצוע.</p>' +
-'<p class="how">הספרייה מתעדכנת לבד: מוסיפים קישור לסרטון, והסיכום נכתב ומתפרסם כאן. <a href="/youtube-pipeline-casestudy.html">איך זה עובד</a></p>' +
+'<p class="hero-dek">כלי שהופך סרטון <bdi>YouTube</bdi> לסיכום קצר בעברית. קוראים בכמה דקות במקום לצפות בכל הסרטון.</p>' +
 '</div>' +
-'<div class="s-double"></div>' +
+'<div>' +
+'<ol class="steps" aria-label="איך זה עובד">' +
+'<li><b>מוסיפים קישור לסרטון</b><span>זה כל מה שצריך לעשות.</span></li>' +
+'<li><b>הסיכום מגיע במייל</b><span>רק מה שנאמר בסרטון, עם צעדים לביצוע.</span></li>' +
+'<li><b>ונשמר כאן, בספרייה</b><span>כל הסיכומים במקום אחד, לפי נושא.</span></li>' +
+'</ol>' +
+'<div class="hero-links"><a href="/youtube-pipeline-casestudy.html">איך זה נבנה ←</a></div>' +
+'</div>' +
+'</div>' +
 '</header>' +
 '<main>' +
-(total ? featuredHtml + quoteHtml +
+(total ?
 '<section class="lib" aria-labelledby="lib-title">' +
-'<div class="lib-head"><h2 id="lib-title">בספרייה</h2>' +
+'<div class="lib-head"><h2 id="lib-title">הסיכומים</h2>' +
 '<div class="srch"><input id="srch" type="search" placeholder="חיפוש" aria-label="חיפוש סיכום" autocomplete="off"></div></div>' +
 '<div class="tabs" role="group" aria-label="סינון לפי נושא">' + tabs + '</div>' +
 '<ol class="toc" id="toc" data-mode="all">' + rows + '</ol>' +
 '<p class="no-results" id="no-res">לא נמצאו סיכומים לחיפוש הזה.</p>' +
 '</section>' : '<p class="no-results" style="display:block">עדיין אין סיכומים</p>') +
-'<section class="sub" aria-labelledby="sub-title">' +
-'<div><h2 id="sub-title">כל סיכום חדש, במייל</h2><p>הרשמה עם כתובת מייל.</p></div>' +
-'<div class="sub-form">' +
-'<input type="email" id="sub-email" class="sub-input" placeholder="המייל שלך" aria-label="כתובת מייל להרשמה לעדכונים" autocomplete="email">' +
-'<button class="sub-btn" type="button" onclick="doSubscribe()">הרשמה</button>' +
-'<div id="sub-msg" class="sub-msg" role="status" aria-live="polite"></div>' +
-'</div></section>' +
 '</main>' +
 '<footer class="foot"><nav><a href="/youtube-pipeline-casestudy.html">איך זה נבנה</a><a href="/about.html">אודות הפרויקט</a></nav>' +
-'<span>נבנה עם Claude · אילת שחק שול · 2026<span class="dot" aria-hidden="true"></span></span></footer>' +
+'<span>נבנה עם <bdi>Claude</bdi> · אילת שחק שול · 2026<span class="dot" aria-hidden="true"></span></span></footer>' +
 '</div>' +
 '<script>' +
 'var WEBAPP_URL="' + CONFIG.WEBAPP_URL + '";' +
